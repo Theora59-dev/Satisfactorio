@@ -1,6 +1,4 @@
-use std::f32::consts::PI;
-
-use bevy::{input::mouse::{self, MouseMotion}, prelude::*};
+use bevy::{input::mouse::MouseMotion, prelude::*};
 
 fn main() {
     App::new()
@@ -8,12 +6,12 @@ fn main() {
     .add_systems(Startup,
         start
     )
-    .add_systems(Startup, 
+    /*.add_systems(Startup, 
         add_people
-    )
+    )*/
     /*.add_systems(Update, 
         greet_people
-    ) */
+    )*/
     .add_systems(Update,
         move_camera
     )
@@ -80,17 +78,18 @@ fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: Event
 
 // Tests des fonctionnalités
 
-#[derive(Component)]
-struct Name(String);
 
 #[derive(Component)]
 struct Person;
 
-fn add_people(mut commands: Commands) {
+#[derive(Component)]
+struct Name(String);
+
+/*fn add_people(mut commands: Commands) {
     commands.spawn((Person, Name("Elaina Proctor".to_string())));
     commands.spawn((Person, Name("Renzo Hume".to_string())));
     commands.spawn((Person, Name("Zayna Nieves".to_string())));
-}
+}*/
 
 fn greet_people(query: Query<&Name, With<Person>>, time: Res<Time>) {
     for name in &query {
