@@ -17,7 +17,8 @@ pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: E
             rotation.0 += -ev.delta.y * 0.00048828125; // constante de sensibilité
             rotation.0 = rotation.0.clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
 
-            transform.rotation = Quat::from_euler(EulerRot::YXZ, rotation.1, rotation.0, 0.0);
+            transform.rotation = Quat::from_rotation_y(-ev.delta.x * 0.00048828125) * transform.rotation;
+            transform.rotation = Quat::from_rotation_x(ev.delta.y * 0.00048828125) * transform.rotation;
 
         }
 
