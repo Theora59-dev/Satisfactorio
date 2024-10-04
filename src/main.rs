@@ -1,7 +1,9 @@
 mod camera;
 
 use bevy::prelude::*;
+use bevy::window::CursorGrabMode;
 use camera::*;
+
 
 fn main() {
     App::new()
@@ -9,20 +11,30 @@ fn main() {
     .add_systems(Startup,
         start
     )
+    .insert_resource(ClearColor(Color::srgb_u8(37, 179, 226)))
     .add_systems(Update,
-        move_camera
+        move_camera,
+
     )
     .run();
 
 }
 
 
-fn start(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>) {
+fn start(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut windows: Query<&mut Window>) {
     // Caméra
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
         ..default()
     });
+
+    if let Ok(mut window) = windows.get_single_mut() {
+        window.cursor.visible = false;
+        window.cursor.grab_mode = CursorGrabMode::Confined;
+    }
+    
+
+
 
     // Cube
     let mesh1 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));

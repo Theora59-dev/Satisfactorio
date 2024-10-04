@@ -1,4 +1,5 @@
-use bevy::{input::mouse::MouseMotion, prelude::*};
+use bevy::{input::mouse::MouseMotion, prelude::*, window::WindowTheme};
+
 
 
 
@@ -10,9 +11,7 @@ pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: E
         for ev in mouse_input.read() {
             transform.rotate_x(ev.delta.y * sensitivity);
             transform.rotate_local_y(-ev.delta.x * sensitivity);
-
         }
-
         if keyboard_input.pressed(KeyCode::KeyW) {
             direction.z -= 1.0;
         }
@@ -33,3 +32,4 @@ pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: E
         transform.translation += direction * 0.125;
     }
 }
+
