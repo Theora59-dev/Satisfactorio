@@ -2,23 +2,21 @@ use bevy::{input::mouse::MouseMotion, prelude::*};
 
 
 
-
-
-
 pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: EventReader<MouseMotion>, _time: Res<Time>, mut query: Query<&mut Transform, With<Camera>>) {
+    let sensitivity = 0.00048828125;
     for mut transform in query.iter_mut() {
         let mut direction = Vec3::ZERO;  
 
         for ev in mouse_input.read() {
-            let mut rotation = transform.rotation.to_euler(EulerRot::XYZ);
+            // let mut rotation = transform.rotation.to_euler(EulerRot::XYZ);
 
-            rotation.1 += ev.delta.x * 0.00048828125; // constante de sensibilité
+            // rotation.1 += ev.delta.x * 0.00048828125; // constante de sensibilité
 
-            rotation.0 += -ev.delta.y * 0.00048828125; // constante de sensibilité
-            rotation.0 = rotation.0.clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
+            // rotation.0 += -ev.delta.y * 0.00048828125; // constante de sensibilité
+            // rotation.0 = rotation.0.clamp(-std::f32::consts::FRAC_PI_2, std::f32::consts::FRAC_PI_2);
 
-            transform.rotation = Quat::from_rotation_y(-ev.delta.x * 0.00048828125) * transform.rotation;
-            transform.rotation = Quat::from_rotation_x(ev.delta.y * 0.00048828125) * transform.rotation;
+            transform.rotation = Quat::from_axis_angle(Vec3::Y, -ev.delta.x * sensitivity) * transform.rotation;
+            transform.rotation = Quat::from_axis_angle(Vec3::X, ev.delta.y * sensitivity) * transform.rotation;
 
         }
 
