@@ -1,5 +1,4 @@
-use bevy::{input::mouse::MouseMotion, prelude::*, window::WindowTheme};
-use std::f32::consts::FRAC_2_PI;
+use bevy::{input::mouse::MouseMotion, prelude::*};
 
 
 

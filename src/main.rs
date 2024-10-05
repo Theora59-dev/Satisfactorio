@@ -23,7 +23,7 @@ fn main() {
 }
 
 
-fn start(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut windows: Query<&mut Window>) {
+fn start(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, materials: ResMut<Assets<StandardMaterial>>, mut windows: Query<&mut Window>) {
     // Caméra
     world_meshes_setup(&mut commands, meshes, materials);
     setup_light_world(&mut commands);
