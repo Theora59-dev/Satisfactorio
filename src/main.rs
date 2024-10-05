@@ -1,20 +1,22 @@
 mod camera;
+mod world_setup;
 
 use bevy::prelude::*;
 use bevy::window::CursorGrabMode;
 use camera::*;
+use world_setup::*;
 
 
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
     .add_systems(Startup,
-        start
+        start,
+                
     )
     .insert_resource(ClearColor(Color::srgb_u8(37, 179, 226)))
     .add_systems(Update,
         move_camera,
-
     )
     .run();
 
@@ -23,60 +25,21 @@ fn main() {
 
 fn start(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut windows: Query<&mut Window>) {
     // Caméra
+    world_meshes_setup(&mut commands, meshes, materials);
+    setup_light_world(&mut commands);
+
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
+        transform: Transform::from_xyz(-15.0, 25.0, -20.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
         ..default()
     });
+    
 
     if let Ok(mut window) = windows.get_single_mut() {
         window.cursor.visible = false;
         window.cursor.grab_mode = CursorGrabMode::Confined;
-    }
+    }  
+
+
+
     
-
-
-
-    // Cube
-    let mesh1 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
-    let material1 = materials.add(Color::srgb(1.0, 0.0, 0.0));
-
-    commands.spawn(PbrBundle {
-        mesh: mesh1,
-        material: material1,
-        transform: Transform::from_xyz(0.0, 0.0, 10.0),
-        ..default()
-    });
-
-    // Cube
-    let mesh2 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
-    let material2 = materials.add(Color::srgb(0.0, 1.0, 0.0));
-
-    commands.spawn(PbrBundle {
-        mesh: mesh2,
-        material: material2,
-        transform: Transform::from_xyz(10.0, 0.0, 0.0),
-        ..default()
-    });
-
-    // Cube
-    let mesh3 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
-    let material3 = materials.add(Color::srgb(0.0, 0.0, 1.0));
-
-    commands.spawn(PbrBundle {
-        mesh: mesh3,
-        material: material3,
-        transform: Transform::from_xyz(-10.0, 0.0, 0.0),
-        ..default()
-    });
-
-    // Cube
-    let mesh4 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
-    let material4 = materials.add(Color::srgb(0.0, 0.0, 1.0));
-
-    commands.spawn(PbrBundle {
-        mesh: mesh4,
-        material: material4,
-        transform: Transform::from_xyz(0.0, 0.0, -10.0),
-        ..default()
-    });
 }

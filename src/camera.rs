@@ -1,5 +1,5 @@
 use bevy::{input::mouse::MouseMotion, prelude::*, window::WindowTheme};
-
+use std::f32::consts::FRAC_2_PI;
 
 
 
@@ -9,20 +9,33 @@ pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: E
         let mut direction = Vec3::ZERO;  
 
         for ev in mouse_input.read() {
-            transform.rotate_x(ev.delta.y * sensitivity);
-            transform.rotate_local_y(-ev.delta.x * sensitivity);
+            
+            transform.rotate_local_x(-ev.delta.y * sensitivity);
+            transform.rotate_y(-ev.delta.x * sensitivity);
         }
+
+        // direction avant-arrière
         if keyboard_input.pressed(KeyCode::KeyW) {
-            direction.z -= 1.0;
+            direction += *transform.forward();
         }
         if keyboard_input.pressed(KeyCode::KeyS) {
-            direction.z += 1.0;
+            direction -= *transform.forward();
         }
+        // direction droite-gauche
         if keyboard_input.pressed(KeyCode::KeyA) {
-            direction.x -= 1.0;
+            direction -= *transform.right();
         }
         if keyboard_input.pressed(KeyCode::KeyD) {
-            direction.x += 1.0;  
+            direction += *transform.right();  
+        }
+
+        // Direction haut-bas
+        if keyboard_input.pressed(KeyCode::ShiftLeft){
+            direction.y -= 1.0;
+        }
+
+        if keyboard_input.pressed(KeyCode::Space){
+            direction.y += 1.0;
         }
 
         if direction.length() > 0.0 {
