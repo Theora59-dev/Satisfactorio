@@ -1,17 +1,23 @@
 mod camera;
-mod world_setup;
+mod world_beta_setup;
+mod world_gen;
 
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, WindowMode};
 use camera::*;
-use world_setup::*;
+use world_beta_setup::*;
+use world_gen::*;
 
 
 fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
     .add_systems(Startup,
-        start,
+        (start,
+        setup_light_world,
+        // world_meshes_setup,
+        make_cubes_of_cubes
+    ),
                 
     )
     .insert_resource(ClearColor(Color::srgb_u8(37, 179, 226)))
@@ -25,8 +31,8 @@ fn main() {
 
 fn start(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, materials: ResMut<Assets<StandardMaterial>>, mut windows: Query<&mut Window>) {
     // Caméra
-    world_meshes_setup(&mut commands, meshes, materials);
-    setup_light_world(&mut commands);
+    // world_meshes_setup(&mut commands, meshes, materials);
+    // setup_light_world(&mut commands);
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-15.0, 25.0, -20.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),

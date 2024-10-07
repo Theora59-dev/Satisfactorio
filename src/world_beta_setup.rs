@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::math::vec2;
 
 
-pub fn world_meshes_setup(commands: &mut Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>){
+pub fn world_meshes_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>){
     // Cube
     let mesh1 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
     let material1 = materials.add(Color::srgb(1.0, 0.0, 0.0));
@@ -60,7 +60,7 @@ pub fn world_meshes_setup(commands: &mut Commands, mut meshes: ResMut<Assets<Mes
 }
 
 
-pub fn setup_light_world(commands: &mut Commands){
+pub fn setup_light_world(mut commands: Commands){
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             color: Color::srgb(1.0, 1.0, 1.0),
