@@ -1,0 +1,68 @@
+use bevy::prelude::*;
+use noise::Perlin;
+use noise::NoiseFn;
+
+#[derive(Debug, Clone, PartialEq)]
+enum Block {
+    Air,
+    // Grass,
+    // Dirt,
+    // Stone,
+    // Wood,
+    // Leaves,
+    // Water,
+    // Lava,
+}
+
+pub struct Chunk {
+    size: usize,
+    blocks: Vec<Block>,
+}
+
+impl Chunk {
+    pub fn new(size: usize) -> Self {
+        Chunk {
+            size,
+            blocks: vec![Block::Air; size * size * size],
+        }
+    }
+}
+
+pub fn generate_height(seed: u32, x: f64, z: f64, scale: f64, octaves: u32) -> f32 {
+    let perlin = Perlin::new(seed);
+
+    let frequency = 16.0 * scale;
+    let amplitude = 20.0 / (octaves as f64);
+    
+    let mut height = 0.0;
+    for i in 0..octaves {
+        let freq = frequency * (i as f64 + 1.0).powf(2.0);
+        let amp = amplitude / (i as f64 + 1.0).powf(2.0);
+        
+        height += perlin.get([x * freq, z * freq]) * amp;
+    }
+    
+    height as f32
+}
+
+
+pub fn create_chunk_mesh(chunk: &mut Chunk, mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>){
+    let cube_mesh = meshes.add(Cuboid::mesh(&Cuboid::new(1.0, 1.0, 1.0)));
+    let cube_material = materials.add(Color::srgb_u8(30, 112, 0));
+    
+    for x in 0..chunk.size {
+        // for y in 0..chunk.size {
+            for z in 0..chunk.size {
+                commands.spawn(PbrBundle {
+                    mesh: cube_mesh.clone(),
+                    material: cube_material.clone(),
+                    transform: Transform::from_xyz(x as f32, generate_height(14, x as f64 , z as f64, 0.001, 4) as i32 as f32, z as f32),
+                    ..default()
+                });
+            }
+        // }
+    }
+
+
+}
+

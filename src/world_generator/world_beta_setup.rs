@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::math::vec2;
 
 
-pub fn world_meshes_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>){
+pub fn _world_meshes_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>){
     // Cube
     let mesh1 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
     let material1 = materials.add(Color::srgb(1.0, 0.0, 0.0));

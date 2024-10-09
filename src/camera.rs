@@ -2,7 +2,7 @@ use bevy::{input::mouse::MouseMotion, prelude::*};
 
 
 
-pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: EventReader<MouseMotion>, _time: Res<Time>, mut query: Query<&mut Transform, With<Camera>>) {
+pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: EventReader<MouseMotion>, time: Res<Time>, mut query: Query<&mut Transform, With<Camera>>) {
     let sensitivity = 0.00048828125;
 
 
@@ -34,23 +34,23 @@ pub fn move_camera(keyboard_input: Res<ButtonInput<KeyCode>>, mut mouse_input: E
         if keyboard_input.pressed(KeyCode::KeyS) {
             let mut custom_transform = *transform.forward();
             custom_transform.y = 0.0;
-            direction -= custom_transform;
+            direction -= custom_transform * time.delta_seconds();
         }
         // direction droite-gauche
         if keyboard_input.pressed(KeyCode::KeyA) {
-            direction -= *transform.right();
+            direction -= *transform.right() * time.delta_seconds();
         }
         if keyboard_input.pressed(KeyCode::KeyD) {
-            direction += *transform.right();  
+            direction += *transform.right() * time.delta_seconds();  
         }
 
         // Direction haut-bas
         if keyboard_input.pressed(KeyCode::ShiftLeft){
-            direction.y -= 1.0;
+            direction.y -= 1.0 * time.delta_seconds();
         }
 
         if keyboard_input.pressed(KeyCode::Space){
-            direction.y += 1.0;
+            direction.y += 1.0 * time.delta_seconds();
         }
 
         if direction.length() > 0.0 {
