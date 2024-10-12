@@ -4,10 +4,10 @@ pub fn move_player(keyboard_input: Res<ButtonInput<KeyCode>>, time: Res<Time>, m
     for mut transform in query.iter_mut() {
 
         let mut direction = Vec3::ZERO;
-        let mut speed = 0.06250;
+        let mut speed: f32 = 15.0;
 
         if keyboard_input.pressed(KeyCode::ControlLeft){
-            speed = 0.525;
+            speed = 25.0;
         }
 
         // direction avant-arrière:
@@ -16,35 +16,34 @@ pub fn move_player(keyboard_input: Res<ButtonInput<KeyCode>>, time: Res<Time>, m
         if keyboard_input.pressed(KeyCode::KeyW) {
             let mut custom_transform = *transform.forward();
             custom_transform.y = 0.0;
-            direction += custom_transform * time.delta_seconds();
+            direction += custom_transform ;
         }
         if keyboard_input.pressed(KeyCode::KeyS) {
             let mut custom_transform = *transform.forward();
             custom_transform.y = 0.0;
-            direction -= custom_transform * time.delta_seconds();
+            direction -= custom_transform ;
         }
         // Direction gauche-droite
         if keyboard_input.pressed(KeyCode::KeyA) {
-            direction -= *transform.right() * time.delta_seconds();
+            direction -= *transform.right() ;
         }
         if keyboard_input.pressed(KeyCode::KeyD) {
-            direction += *transform.right() * time.delta_seconds();  
+            direction += *transform.right() ;  
         }
 
         // Direction haut-bas
         if keyboard_input.pressed(KeyCode::ShiftLeft){
-            direction.y -= 1.5 * time.delta_seconds();
+            direction.y -= 1.5;
         }
 
         if keyboard_input.pressed(KeyCode::Space){
-            direction.y += 1.5 * time.delta_seconds();
+            direction.y += 1.5;
         }
 
-        if direction.length() > 0.0 {
-            direction = direction.normalize() * speed;
+        
+        if direction != Vec3::ZERO {
+            transform.translation += direction.normalize() * speed * time.delta_seconds();
         }
-
-        transform.translation += direction;
 
     }
 }
