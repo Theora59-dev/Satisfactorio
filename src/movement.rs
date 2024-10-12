@@ -4,10 +4,10 @@ pub fn move_player(keyboard_input: Res<ButtonInput<KeyCode>>, time: Res<Time>, m
     for mut transform in query.iter_mut() {
 
         let mut direction = Vec3::ZERO;
-        let mut speed = 0.03125;
+        let mut speed = 0.06250;
 
         if keyboard_input.pressed(KeyCode::ControlLeft){
-            speed = 0.125;
+            speed = 0.525;
         }
 
         // direction avant-arrière:
@@ -16,12 +16,12 @@ pub fn move_player(keyboard_input: Res<ButtonInput<KeyCode>>, time: Res<Time>, m
         if keyboard_input.pressed(KeyCode::KeyW) {
             let mut custom_transform = *transform.forward();
             custom_transform.y = 0.0;
-            direction += custom_transform.abs() * time.delta_seconds();
+            direction += custom_transform * time.delta_seconds();
         }
         if keyboard_input.pressed(KeyCode::KeyS) {
             let mut custom_transform = *transform.forward();
             custom_transform.y = 0.0;
-            direction -= custom_transform.abs() * time.delta_seconds();
+            direction -= custom_transform * time.delta_seconds();
         }
         // Direction gauche-droite
         if keyboard_input.pressed(KeyCode::KeyA) {
