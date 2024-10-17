@@ -31,7 +31,7 @@ pub fn display_chunk_mesh(
 ) {
     const CHUNK_SIZE: f32 = 32.0;
     const RENDER_DISTANCE: i32 = 5;
-    const UNLOAD_DISTANCE: i32 = 7;
+    const UNLOAD_DISTANCE: i32 = 5;
 
 
     let (_camera_entity, camera_transform) = query.single();
@@ -54,7 +54,24 @@ pub fn display_chunk_mesh(
         }
     }
 
-    // Décharger les chunks trop loins
+    
+}
+
+
+pub fn unload_chunks(
+    mut commands: Commands,
+    query: Query<(Entity, &Transform), With<Camera>>,
+    mut loaded_chunks: ResMut<LoadedChunks>,
+){
+    const UNLOAD_DISTANCE: i32 = 7;
+    const CHUNK_SIZE: f32 = 32.0;
+
+
+    let (_camera_entity, camera_transform) = query.single();
+    let player_position = camera_transform.translation;
+    let player_chunk_x = (player_position.x / CHUNK_SIZE).floor() as i32;
+    let player_chunk_z = (player_position.z / CHUNK_SIZE).floor() as i32;
+    // Décharger les chunks trop loin
     while let Some((entity, (chunk_x, chunk_z))) = loaded_chunks.loaded_chunks_queue.pop_front() {
         let distance_to_player = ((player_chunk_x - chunk_x).abs() + (player_chunk_z - chunk_z).abs()) / 2;
         if distance_to_player > UNLOAD_DISTANCE {
@@ -84,6 +101,5 @@ pub fn display_chunk_mesh(
         }
     }
 }
-
 
 

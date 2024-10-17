@@ -14,6 +14,8 @@ pub fn _world_meshes_setup(mut commands: Commands, mut meshes: ResMut<Assets<Mes
         ..default()
     });
 
+    
+
     // Cube
     let mesh2 = meshes.add(Cuboid::mesh(&Cuboid::new(5.0, 10.0, 5.0)));
     let material2 = materials.add(Color::srgb(0.0, 1.0, 0.0));

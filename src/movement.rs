@@ -7,7 +7,7 @@ pub fn move_player(keyboard_input: Res<ButtonInput<KeyCode>>, time: Res<Time>, m
         let mut speed: f32 = 15.0;
 
         if keyboard_input.pressed(KeyCode::ControlLeft){
-            speed = 25.0;
+            speed = 250.0;
         }
 
         // direction avant-arrière:

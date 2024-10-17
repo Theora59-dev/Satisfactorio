@@ -15,6 +15,7 @@ impl Chunk {
             size,
             chunk_coords_x,
             chunk_coords_z,
+            
         }
         
     }

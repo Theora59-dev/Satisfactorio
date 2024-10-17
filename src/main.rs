@@ -8,14 +8,17 @@ use debug_controls::*;
 use world_generator::*;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, WindowMode};
+use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
 use camera::*;
 
 
 
 fn main() {
     App::new()
-    .add_plugins(DefaultPlugins)
+    .add_plugins((DefaultPlugins, WireframePlugin))
     .insert_resource(LoadedChunks::default())
+    .insert_resource(CameraRotRelative(0.0))
+    .init_resource::<WireframeConfig>()
     .insert_resource(ClearColor(Color::srgb_u8(37, 179, 226)))
     .add_systems(Startup, (
         start,
@@ -25,6 +28,7 @@ fn main() {
     )
     .add_systems(Update,(
         move_camera,
+        unload_chunks,
         display_chunk_mesh,
         move_player,
         check_debug_controls,
@@ -34,8 +38,9 @@ fn main() {
 }
 
 
-fn start(mut commands: Commands, mut windows: Query<&mut Window>) {
-
+fn start(mut commands: Commands, mut windows: Query<&mut Window>, mut wireframe_config: ResMut<WireframeConfig>,
+) {
+    wireframe_config.global = true;
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-15.0, 25.0, -20.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
         ..default()
