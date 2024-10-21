@@ -32,7 +32,7 @@ pub fn display_chunk_mesh(
     mut chunk_manager: ResMut<ChunkManager>,
 ) {
     const CHUNK_SIZE: f32 = 32.0;
-    const RENDER_DISTANCE: i32 = 5;
+    const RENDER_DISTANCE: i32 = 16;
 
 
     let (_camera_entity, camera_transform) = query.single();
@@ -53,7 +53,6 @@ pub fn display_chunk_mesh(
             }
         }
     }
-    println!("Chunk to load: {} | Total chunks: {}", chunk_manager.chunks_loaded.len(), chunk_manager.chunks_to_load.len());
 
     
 }
@@ -64,66 +63,32 @@ pub fn unload_chunks(
     query: Query<(Entity, &Transform), With<Camera>>,
     mut chunk_manager: ResMut<ChunkManager>,
 ){
-    const UNLOAD_DISTANCE: i32 = 5;
+    const UNLOAD_DISTANCE: i32 = 16;
     const CHUNK_SIZE: f32 = 32.0;
-
 
     let (_camera_entity, camera_transform) = query.single();
     let player_position = camera_transform.translation;
     let player_chunk_x = (player_position.x / CHUNK_SIZE).floor() as i32;
     let player_chunk_z = (player_position.z / CHUNK_SIZE).floor() as i32;
 
+    let mut chunks_to_remove = Vec::new();
 
-
-    for (index, (entity, (chunk_x, chunk_z))) in chunk_manager.chunks_loaded.iter_mut().enumerate(){
+    chunk_manager.chunks_loaded.retain(|(entity, (chunk_x, chunk_z))| {
         let distance_to_player = ((player_chunk_x - *chunk_x).abs() + (player_chunk_z - *chunk_z).abs()) / 2;
         if distance_to_player > UNLOAD_DISTANCE {
             if let Some(mut entity_commands) = commands.get_entity(*entity) {
                 entity_commands.despawn();
-                // chunk_manager.chunks_to_load.remove(&(*chunk_x, *chunk_z));
             }
-        else{
+            chunks_to_remove.push((*chunk_x, *chunk_z));
+            false
+        } else {
+            true
+        }
+    });
 
-        }
-        }
+    for chunk_coords in chunks_to_remove {
+        chunk_manager.chunks_to_load.remove(&chunk_coords);
     }
-
-
-
-
-
-
-    
-
-    // // Décharger les chunks trop loin
-    // while let Some((entity, (chunk_x, chunk_z))) = chunk_manager.chunks_loaded.pop_front() {
-    //     let distance_to_player = ((player_chunk_x - chunk_x).abs() + (player_chunk_z - chunk_z).abs()) / 2;
-    //     if distance_to_player > UNLOAD_DISTANCE {
-    //         if let Some(mut entity_commands) = commands.get_entity(entity) {
-    //             entity_commands.despawn();
-    //         }
-    //         chunk_manager.chunks_to_load.remove(&(chunk_x, chunk_z));
-    //         println!("Chunk unloaded: ({}, {}) | Remaining chunks: {}", chunk_x, chunk_z, chunk_manager.chunks_to_load.len());
-    //     } else {
-    //         // Si le chunk n'est pas encore prêt à être déchargé, le remettre à la fin de la queue
-    //         chunk_manager.chunks_loaded.push_back((entity, (chunk_x, chunk_z)));
-    //         break;
-    //     }
-    // }
-
-    // // Supprimer tous les chunks plus chargés
-    // let mut entities_to_remove = Vec::new();
-    // for (entity, (chunk_x, chunk_z)) in &chunk_manager.chunks_loaded {
-    //     if !chunk_manager.chunks_to_load.contains(&(*chunk_x, *chunk_z)) {
-    //         entities_to_remove.push(*entity);
-    //     }
-    // }
-
-    // for entity in entities_to_remove.drain(..) {
-    //     if let Some(mut entity_commands) = commands.get_entity(entity) {
-    //         entity_commands.despawn();
-    //     }
-    // }
 }
 
 

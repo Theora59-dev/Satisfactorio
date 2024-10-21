@@ -40,7 +40,7 @@ fn main() {
 
 fn start(mut commands: Commands, mut windows: Query<&mut Window>, mut wireframe_config: ResMut<WireframeConfig>,
 ) {
-    wireframe_config.global = true;
+    wireframe_config.global = false;
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-15.0, 25.0, -20.0).with_rotation(Quat::default()),
         ..default()
