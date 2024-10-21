@@ -2,16 +2,13 @@ use bevy::prelude::*;
 use noise::Perlin;
 use noise::NoiseFn;
 
-
 pub struct Chunk {
     size: usize,
     chunk_coords_x: i32,
     chunk_coords_z: i32,
 }
 
-
 impl Chunk {
-    
     pub fn new(size: usize, chunk_coords_x: i32,chunk_coords_z: i32,) -> Self {
         Chunk {
             size,
@@ -67,7 +64,6 @@ fn generate_height(seed: u32, x: f64, z: f64, scale: f64, octaves: u32) -> f32 {
         
         height += perlin.get([x * freq, z * freq]) * amp;
     }
-    
     height as f32
 }
 
