@@ -21,7 +21,7 @@ fn main() {
     .add_plugins((DefaultPlugins, WireframePlugin, FrameTimeDiagnosticsPlugin))
     .insert_resource(ChunkManager::default())
     .insert_resource(RenderDistance(5))
-    .insert_resource(ChunkWidth(32.0))
+    .insert_resource(ChunkWidth(62.0))
     .insert_resource(CameraRotRelative(0.0))
     .init_resource::<WireframeConfig>()
     .insert_resource(ClearColor(Color::srgb_u8(37, 179, 226)))

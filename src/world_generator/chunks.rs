@@ -1,21 +1,18 @@
-use bevy::math::VectorSpace;
 use bevy::prelude::*;
-use bevy::render::render_resource::encase::internal::CreateFrom;
+use bevy::render::{
+    mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
+    render_asset::RenderAssetUsages,
+};
+
 use noise::Perlin;
 use noise::NoiseFn;
-use rayon::vec;
-
-use super::ChunkWidth;
+use std::collections::BTreeSet;
+use binary_greedy_meshing as bgm;
 
 pub struct Chunk {
     size: usize,
     chunk_coords_x: i32,
     chunk_coords_z: i32,
-}
-
-enum Blocks {
-    Air = 0,
-    Grass = 1
 }
 
 impl Chunk {
@@ -32,187 +29,33 @@ impl Chunk {
         meshes: &mut ResMut<Assets<Mesh>>,
         materials: &mut ResMut<Assets<StandardMaterial>>
     ) -> Vec<Entity> {
-
-        let triangle_mesh = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::X, Vec3::Y, Vec3::Z)));
-        let triangle_x_1 = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::X, Vec3::Y, Vec3::ZERO)));
-        let triangle_x_2 = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::Y+Vec3::X, Vec3::Y, Vec3::X)));
-        let triangle_x_1_r = meshes.add(Triangle3d::mesh(&Triangle3d::new(-Vec3::X, Vec3::Y, Vec3::ZERO)));
-        let triangle_x_2_r = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::Y-Vec3::X, Vec3::Y, -Vec3::X)));
-        let triangle_y_1 = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::X, Vec3::ZERO, Vec3::Z)));
-        let triangle_y_2 = meshes.add(Triangle3d::mesh(&Triangle3d::new(-Vec3::X, Vec3::ZERO, -Vec3::Z)));
-        let triangle_z_1 = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::Z, Vec3::Y, Vec3::ZERO)));
-        let triangle_z_2 = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::Y+Vec3::Z, Vec3::Y, Vec3::Z)));
-        let triangle_z_1_r = meshes.add(Triangle3d::mesh(&Triangle3d::new(-Vec3::Z, Vec3::Y, Vec3::ZERO)));
-        let triangle_z_2_r = meshes.add(Triangle3d::mesh(&Triangle3d::new(Vec3::Y-Vec3::Z, Vec3::Y, -Vec3::Z)));
-        let triangle_material = materials.add(Color::srgba_u8(127, 127, 127, 255));
-
+        
         let x_chunk_origin: f32 = self.chunk_coords_x as f32 * self.size as f32;
         let z_chunk_origin: f32 = self.chunk_coords_z as f32 * self.size as f32;
-
+        
         let mut entities: Vec<Entity> = Vec::new();
+        let mesh = meshes.add(generate_mesh(x_chunk_origin, z_chunk_origin));
 
-        let mut a: Vec<Vec<(i32, i32)>> = vec![vec![(0, 0); self.size]; self.size];
+        let entity = commands.spawn(PbrBundle {
+            mesh,
+            material: materials.add(StandardMaterial {
+                base_color: Color::linear_rgba(0.1, 0.1, 0.1, 1.0),
+                ..Default::default()
+            }),
+            transform: Transform::from_xyz(
+                x_chunk_origin, 
+                0.0,
+                z_chunk_origin
+                ),
+            ..Default::default()
+        }).id();
 
-        for x in 0..self.size {
-            for z in 0..self.size {
-                a[x][z] = (generate_height(14, x_chunk_origin as f64 + x as f64, z_chunk_origin as f64 + z as f64, 0.001, 4) as i32, 0);
-            }
-        }
-
-        for x in 0..self.size {
-            for z in 0..self.size {
-                let y = a[x][z].0;
-
-                if x > 0 && a[x-1][z].0 < y {
-                    let entity1 = commands.spawn(PbrBundle {
-                        mesh: triangle_z_1.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin - 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin - 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity1);
-                    let entity2 = commands.spawn(PbrBundle {
-                        mesh: triangle_z_2.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin - 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin - 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity2);
-                }
-                if x < self.size-1 && a[x+1][z].0 < y {
-                    let entity1 = commands.spawn(PbrBundle {
-                        mesh: triangle_z_1_r.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin + 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin + 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity1);
-                    let entity2 = commands.spawn(PbrBundle {
-                        mesh: triangle_z_2_r.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin + 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin + 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity2);
-                }
-                if z > 0 && a[x][z-1].0 < y {
-                    let entity1 = commands.spawn(PbrBundle {
-                        mesh: triangle_x_1_r.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin + 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin - 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity1);
-                    let entity2 = commands.spawn(PbrBundle {
-                        mesh: triangle_x_2_r.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin + 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin - 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity2);
-                }
-                if z < self.size-1 && a[x][z+1].0 < y {
-                    let entity1 = commands.spawn(PbrBundle {
-                        mesh: triangle_x_1.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin - 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin + 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity1);
-                    let entity2 = commands.spawn(PbrBundle {
-                        mesh: triangle_x_2.clone(),
-                        material: triangle_material.clone(),
-                        transform: Transform::from_xyz(
-                            x_chunk_origin - 0.5 + x as f32, 
-                            y as f32 - 0.5, 
-                            z_chunk_origin + 0.5 + z as f32
-                        ),
-                        ..default()
-                    }).id();
-                    entities.push(entity2);
-                }
-                let entity = commands.spawn(PbrBundle {
-                    mesh: triangle_y_1.clone(),
-                    material: triangle_material.clone(),
-                    transform: Transform::from_xyz(
-                        x_chunk_origin - 0.5 + x as f32, 
-                        y as f32 + 0.5, 
-                        z_chunk_origin - 0.5 + z as f32
-                    ),
-                    ..default()
-                }).id();
-                entities.push(entity);
-                let entity2 = commands.spawn(PbrBundle {
-                    mesh: triangle_y_2.clone(),
-                    material: triangle_material.clone(),
-                    transform: Transform::from_xyz(
-                        x_chunk_origin + 0.5 + x as f32, 
-                        y as f32 + 0.5, 
-                        z_chunk_origin + 0.5 + z as f32
-                    ),
-                    ..default()
-                }).id();
-                entities.push(entity2);
-            }
-        }
-
+        entities.push(entity);
         entities
 
-        /*let cube_mesh = meshes.add(Cuboid::mesh(&Cuboid::new(1.0, 1.0, 1.0)));
-        let cube_material = materials.add(Color::srgba_u8(30, 112, 0, 255));
-        
-        let x_chunk_origin: f32 = self.chunk_coords_x as f32 * self.size as f32;
-        let z_chunk_origin: f32 = self.chunk_coords_z as f32 * self.size as f32;
-        
-        let mut entities: Vec<Entity> = Vec::new();
-        for x in 0..self.size {
-            for z in 0..self.size {
-                let entity = commands.spawn(PbrBundle {
-                    mesh: cube_mesh.clone(),
-                    material: cube_material.clone(),
-                    transform: Transform::from_xyz(
-                        x_chunk_origin + x as f32, 
-                        generate_height(14,  x_chunk_origin as f64 + x as f64, z_chunk_origin as f64 + z as f64, 0.001, 4) as i32 as f32, 
-                        z_chunk_origin + z as f32
-                    ),
-                    ..default()
-                }).id();
-                
-                entities.push(entity);
-            }
-        }
-        
-        entities*/
     }
 }
+        
 
 // Bruit de perlin 2d
 fn generate_height(seed: u32, x: f64, z: f64, scale: f64, octaves: u32) -> f32 {
@@ -231,3 +74,59 @@ fn generate_height(seed: u32, x: f64, z: f64, scale: f64, octaves: u32) -> f32 {
     height as f32
 }
 
+fn generate_mesh(x_chunk_origin: f32, z_chunk_origin: f32) -> Mesh {
+    const MASK6: u32 = 0b111_111;
+
+    let voxels = voxel_buffer(x_chunk_origin, z_chunk_origin);
+    let mut mesh_data = bgm::MeshData::new();
+
+    bgm::mesh(&voxels, &mut mesh_data, BTreeSet::from([2, 3]));
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    for (face_n, quads) in mesh_data.quads.iter().enumerate() {
+        let face: bgm::Face = (face_n as u8).into();
+        let n = face.n();
+        for quad in quads {
+            let vertices_packed = face.vertices_packed(*quad);
+            for vertex_packed in vertices_packed.iter() {
+                let x = *vertex_packed & MASK6;
+                let y = (*vertex_packed >> 6) & MASK6;
+                let z = (*vertex_packed >> 12) & MASK6;
+                positions.push([x as f32, y as f32, z as f32]);
+                normals.push(n.clone());
+            }
+        }
+    }
+    let indices = bgm::indices(positions.len());
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_UV_0,
+        VertexAttributeValues::Float32x2(vec![[0.0; 2]; positions.len()]),
+    );
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        VertexAttributeValues::Float32x3(positions),
+    );
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_NORMAL,
+        VertexAttributeValues::Float32x3(normals),
+    );
+    mesh.insert_indices(Indices::U32(indices));
+    mesh
+    
+}
+
+
+fn voxel_buffer(x_chunk_origin: f32, z_chunk_origin: f32) -> [u16; bgm::CS_P3] {
+    let mut voxels = [0; bgm::CS_P3];
+    for x in 0..bgm::CS {
+            for z in 0..bgm::CS {
+                let y = generate_height(14, x_chunk_origin as f64 + x as f64, z_chunk_origin as f64 + z as f64, 0.001, 4) as usize;
+                voxels[bgm::pad_linearize(x, y, z)] = 1;
+            }
+    }
+    voxels
+}
