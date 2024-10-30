@@ -83,6 +83,9 @@ fn get_blocks() -> [[[bool; C_FS]; C_FS]; C_FS] {
     blocks
 }
 
+// Greedy mesher
+// Attention ça n'est prévu que pour le premier rectangle, à coder pour tout le reste des rectangles
+// Ne marche pas encore - n'a pas encore testé
 fn get_triangles_axis(blocks: [[bool; C_FS]; C_FS]) -> Vec<[Vec3; 3]> {
     let triangles: Vec<[Vec3; 3]> = Vec::new();
 
@@ -112,6 +115,7 @@ fn get_triangles_axis(blocks: [[bool; C_FS]; C_FS]) -> Vec<[Vec3; 3]> {
                     }
                 }
             }
+            // Calculer triangles
             w += 1;
         }
         x += 1;
