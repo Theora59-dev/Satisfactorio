@@ -1,7 +1,13 @@
-use std::sync::Arc;
+use crate::{Vertex, VERTICES};
 
+use std::sync::Arc;
+use wgpu::util::DeviceExt;
 use winit::{
-    application::ApplicationHandler, event::*, event_loop::{ActiveEventLoop, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::Window
+    application::ApplicationHandler,
+    event::*,
+    event_loop::{ActiveEventLoop, EventLoop},
+    keyboard::{KeyCode, PhysicalKey},
+    window::Window,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -15,7 +21,9 @@ pub struct State {
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
     window: Arc<Window>,
+    num_vertices: u32,
 }
 
 impl State {
@@ -23,6 +31,7 @@ impl State {
     // but we will in the next tutorial
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
+        let num_vertices = VERTICES.len() as u32;
 
         // The instance is a handle to our GPU
         // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
@@ -65,7 +74,9 @@ impl State {
         // Shader code in this tutorial assumes an sRGB surface texture. Using a different
         // one will result in all the colors coming out darker. If you want to support non
         // sRGB surfaces, you'll need to account for that when drawing to the frame.
-        let surface_format = surface_caps.formats.iter()
+        let surface_format = surface_caps
+            .formats
+            .iter()
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
@@ -85,7 +96,6 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
@@ -99,13 +109,14 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[],
+                buffers: &[Vertex::desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState { // 4.
+                targets: &[Some(wgpu::ColorTargetState {
+                    // 4.
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
@@ -134,16 +145,23 @@ impl State {
             cache: None,
         });
 
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         Ok(Self {
             surface,
             device,
+            vertex_buffer: vertex_buffer,
             queue,
             config,
             is_surface_configured: false,
             render_pipeline,
             window,
+            num_vertices,
         })
-
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
@@ -159,7 +177,6 @@ impl State {
         // remove `todo!()`
     }
 
-    
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
 
@@ -167,14 +184,18 @@ impl State {
         if !self.is_surface_configured {
             return Ok(());
         }
-            
-        let output = self.surface.get_current_texture()?;
-    
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
+        let output = self.surface.get_current_texture()?;
+
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -200,7 +221,8 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline); // 2.
-            render_pass.draw(0..3, 0..1); // 3.
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.draw(0..self.num_vertices, 0..1); // 3.
         }
 
         // submit will accept anything that implements IntoIter
@@ -208,7 +230,6 @@ impl State {
         output.present();
 
         Ok(())
-
     }
 
     fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
@@ -246,7 +267,7 @@ impl ApplicationHandler<State> for App {
         {
             use wasm_bindgen::JsCast;
             use winit::platform::web::WindowAttributesExtWebSys;
-            
+
             const CANVAS_ID: &str = "canvas";
 
             let window = wgpu::web_sys::window().unwrap_throw();
@@ -261,7 +282,7 @@ impl ApplicationHandler<State> for App {
         #[cfg(not(target_arch = "wasm32"))]
         {
             // If we are not on web we can use pollster to
-            // await the 
+            // await the
             self.state = Some(pollster::block_on(State::new(window)).unwrap());
         }
 

@@ -14,6 +14,7 @@ env_logger = "0.10"
 log = "0.4"
 wgpu = "28.0"
 pollster = "0.3"
+bytemuck = { version = "1.24", features = [ "derive" ] }
 
 # Optimisation:
 
