@@ -1,4 +1,5 @@
 mod engine;
+mod world;
 
 use engine::core::application::run;
 
