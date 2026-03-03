@@ -1,5 +1,6 @@
 mod engine;
 mod world;
+mod player;
 
 use engine::core::application::run;
 

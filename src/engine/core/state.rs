@@ -1,10 +1,15 @@
 use crate::engine::render::camera::{Camera, CameraController, CameraUniform};
-use crate::engine::render::geometry::{Vertex, INDICES, VERTICES};
+use crate::engine::render::geometry::{Vertex};
+use crate::player::Player;
+use crate::world::{World, Chunk};
 use std::sync::Arc;
+use std::time::{self, Instant};
+use cgmath::num_traits::ToPrimitive;
 use wgpu::util::DeviceExt;
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::KeyCode;
 use winit::window::Window;
+use crate::engine::render::mesh::WorldMesh;
 
 // This will store the state of our game
 pub struct State {
@@ -15,7 +20,7 @@ pub struct State {
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
+    // index_buffer: wgpu::Buffer,
     pub window: Arc<Window>,
     num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
@@ -26,6 +31,9 @@ pub struct State {
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_controller: CameraController,
+    world: World,
+    player: Player,
+    num_vertex: u32,
 }
 
 impl State {
@@ -33,7 +41,8 @@ impl State {
     // but we will in the next tutorial
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
-        let num_indices = INDICES.len() as u32;
+        // let num_indices = INDICES.len() as u32;
+        let num_indices = 0;
 
         // The instance is a handle to our GPU
         // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
@@ -58,7 +67,7 @@ impl State {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: None,
-                required_features: wgpu::Features::empty(),
+                required_features: wgpu::Features::POLYGON_MODE_LINE,
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
                 // WebGL doesn't support all of wgpu's features, so if
                 // we're building for the web we'll have to disable some.
@@ -142,13 +151,13 @@ impl State {
             label: Some("diffuse_bind_group"),
         });
         let camera = Camera::new(
-            (0.0, 1.0, 2.0).into(),
+            (16.0, 16.0, 16.0).into(),
             (0.0, 0.0, 0.0).into(),
             cgmath::Vector3::unit_y(),
             config.width as f32 / config.height as f32,
             45.0,
-            0.1,
-            100.0,
+            0.001,
+            10000.0,
         );
 
         let mut camera_uniform = CameraUniform::new();
@@ -184,7 +193,7 @@ impl State {
             label: Some("camera_bind_group"),
         });
 
-        let camera_controller = CameraController::new(0.005);
+        let camera_controller = CameraController::new(0.05);
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -206,7 +215,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::buffer_layout()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -242,22 +251,54 @@ impl State {
             cache: None,
         });
 
+        let start = Instant::now();
+
+        let mut world = World::new();
+        let player = Player::new();
+
+        let [min_x, max_x, min_y, max_y, min_z, max_z] = player.get_rendered_chunk_range();
+
+        for x in min_x..=max_x {
+            for y in min_y..=max_y {
+                for z in min_z..=max_z {
+                    let chunk = Chunk::generate(x, y, z);
+                    world.set_chunk(x, y, z, chunk);
+                }
+            }
+        }
+
+        let vertices = WorldMesh::update(&world, &player, &WorldMesh::new());
+
+        println!("Time to make meshes: {:.3}ms.", start.elapsed().as_micros().to_f64().unwrap() / 1_000.0);
+
+        let flat_vertices: Vec<Vertex> = vertices
+            .meshes
+            .iter()
+            .flat_map(|chunk| chunk.1.vertices.clone())
+            .collect::<Vec<Vertex>>();
+
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
+            contents: bytemuck::cast_slice(&flat_vertices),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
+        // let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        //     label: Some("Vertex Buffer"),
+        //     contents: bytemuck::cast_slice(VERTICES),
+        //     usage: wgpu::BufferUsages::VERTEX,
+        // });
+
+        // let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        //     label: Some("Index Buffer"),
+        //     contents: bytemuck::cast_slice(INDICES),
+        //     usage: wgpu::BufferUsages::INDEX,
+        // });
 
         Ok(Self {
             surface,
             device,
-            index_buffer: index_buffer,
+            // index_buffer: index_buffer,
             vertex_buffer: vertex_buffer,
             queue,
             config,
@@ -272,6 +313,9 @@ impl State {
             camera_buffer,
             camera_bind_group,
             camera_controller,
+            world,
+            player,
+            num_vertex: flat_vertices.len() as u32
         })
     }
 
@@ -341,10 +385,13 @@ impl State {
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
 
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+            // let v = self.vertex_buffer.size();
+            // println!("{v}");
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
+            // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
 
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // 2.
+            render_pass.draw(0..self.num_vertex, 0..1);
+            // render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // 2.
         }
 
         // submit will accept anything that implements IntoIter
