@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use cgmath::num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-use crate::{player::Player, world::{Block, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, LAST_CHUNK_BLOCK_INDEX, World}};
+use crate::{player::Player, world::{Block, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, FIRST_PADDED_CHUNK_AXIS_INDEX, LAST_CHUNK_AXIS_INDEX, LAST_PADDED_CHUNK_AXIS_INDEX, PADDED_CHUNK_SIZE, PaddedChunk, World}};
 use crate::engine::render::geometry::Vertex;
 
 const X: f32 = 1.0;
@@ -146,7 +146,7 @@ impl ChunkMesh {
                     else {
                         chunk.get_block_from_xyz(lx-1, ly, lz)
                     };
-                    let right = if lx == LAST_CHUNK_BLOCK_INDEX {
+                    let right = if lx == LAST_CHUNK_AXIS_INDEX {
                         world.get_block_from_xyz(gx+1, gy, gz)
                     }
                     else {
@@ -158,7 +158,7 @@ impl ChunkMesh {
                     else {
                         chunk.get_block_from_xyz(lx, ly-1, lz)
                     };
-                    let above = if ly == LAST_CHUNK_BLOCK_INDEX {
+                    let above = if ly == LAST_CHUNK_AXIS_INDEX {
                         world.get_block_from_xyz(gx, gy+1, gz)
                     }
                     else {
@@ -170,7 +170,7 @@ impl ChunkMesh {
                     else {
                         chunk.get_block_from_xyz(lx, ly, lz-1)
                     };
-                    let front = if lz == LAST_CHUNK_BLOCK_INDEX {
+                    let front = if lz == LAST_CHUNK_AXIS_INDEX {
                         world.get_block_from_xyz(gx, gy, gz+1)
                     }
                     else {
@@ -225,30 +225,32 @@ impl ChunkMesh {
         // We allocate once to avoid memory reallocation/destruction.
         let mut mask: [[Option<(i32, Face)>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         
+        let mut previous: Block;
         let mut current: Block;
-        let mut next: Block;
 
         // Todo:
         // - replace world.get_block by chunk.get_block whenever possible
         // - check if the block is in the chunk before adding it to the mask
         
+        let padded_chunk = PaddedChunk::new(chunk, world);
+
         // X axis
-        for x in -1..CHUNK_SIZE {
+        for x in 0..=CHUNK_SIZE {
             // Mask
             for y in 0..CHUNK_SIZE {
                 for z in 0..CHUNK_SIZE {
-                    current = world.get_local_block_from_xyz(x, y, z, cx, cy, cz);
-                    next = world.get_local_block_from_xyz(x + 1, y, z, cx, cy, cz);
+                    previous = padded_chunk.get_block_from_xyz(x, y + 1, z + 1);
+                    current = padded_chunk.get_block_from_xyz(x + 1, y + 1, z + 1);
 
-                    match (current.is_air(), next.is_air()) {
+                    match (previous.is_air(), current.is_air()) {
                         (true, true) | (false, false) => {
                             mask[y as usize][z as usize] = None;
                         }
                         (true, false) => {
-                            mask[y as usize][z as usize] = Some((next.id, Face::Left));
+                            mask[y as usize][z as usize] = Some((current.id, Face::Left));
                         }
                         (false, true) => {
-                            mask[y as usize][z as usize] = Some((current.id, Face::Right));
+                            mask[y as usize][z as usize] = Some((previous.id, Face::Right));
                         }
                     }
                 }
@@ -256,8 +258,10 @@ impl ChunkMesh {
 
             // Mesh quads
             for y in 0..CHUNK_SIZE {
-                for z in 0..CHUNK_SIZE {
+                let mut z = 0;
+                while z < CHUNK_SIZE {
                     let Some(face) = mask[y as usize][z as usize] else {
+                        z += 1;
                         continue;
                     };
 
@@ -286,11 +290,11 @@ impl ChunkMesh {
                     // Add the quad to the mesh
                     let is_left_face = face.1 == Face::Left;
                     
-                    let x = (x + offset_x + (is_left_face as i32)) as f32;
-                    let y0: f32 = (y + offset_y) as f32;
-                    let y1: f32 = (y + quad_y + offset_y) as f32;
-                    let z0: f32 = (z + offset_z) as f32;
-                    let z1: f32 = (z + quad_z + offset_z) as f32;
+                    let x = (x - 1 + offset_x + (is_left_face as i32)) as f32;
+                    let y0 = (y + offset_y) as f32;
+                    let y1 = (y + quad_y + offset_y) as f32;
+                    let z0 = (z + offset_z) as f32;
+                    let z1 = (z + quad_z + offset_z) as f32;
 
                     let v1 = Vertex::new(x, y0, z0);
                     let v2 = Vertex::new(x, y1, z1);
@@ -314,6 +318,10 @@ impl ChunkMesh {
                             mask[iy as usize][iz as usize] = None;
                         }
                     }
+
+                    // We can at least skip that part, knowing itering over this small part of the quad won't result in anything
+                    // Skipping quad_y will probably makes us lose vertex in the process, this is why we just skip z.
+                    z += quad_z;
                 }
             }
         }
