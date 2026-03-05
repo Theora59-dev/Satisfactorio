@@ -16,47 +16,47 @@ pub const FIRST_PADDED_CHUNK_AXIS_INDEX: i32 = 0;
 pub const LAST_PADDED_CHUNK_AXIS_INDEX: i32 = PADDED_CHUNK_SIZE - 1;
 
 #[derive(Clone, Copy)]
-pub struct Block {
-    pub id: i32
+pub struct BlockInstance {
+    pub id: u32
 }
 
 pub struct Chunk {
-    blocks: [Block; CHUNK_BLOCK_NUMBER],
+    blocks: [BlockInstance; CHUNK_BLOCK_NUMBER],
     x: i32,
     y: i32,
     z: i32
 }
 
 pub struct PaddedChunk {
-    blocks: [Block; PADDED_CHUNK_BLOCK_NUMBER],
+    blocks: [BlockInstance; PADDED_CHUNK_BLOCK_NUMBER],
 }
 
 pub struct World {
     chunks: HashMap<(i32, i32, i32), Chunk>,
 }
 
-impl Block {
-    pub fn new(id: i32) -> Block {
-        return Block {
+impl BlockInstance {
+    pub fn new(id: u32) -> BlockInstance {
+        return BlockInstance {
             id: id
         };
     }
 
-    pub fn air() -> Block {
-        return Block {
+    pub fn air() -> BlockInstance {
+        return BlockInstance {
             id: 0,
         };
     }
 
     pub fn is_air(&self) -> bool {
-        return self.id == Block::air().id;
+        return self.id == BlockInstance::air().id;
     }
 }
 
 impl Chunk {
     pub fn generate(cx: i32, cy: i32, cz: i32) -> Chunk {
-        let mut chunk = Chunk { blocks: [Block::air(); CHUNK_BLOCK_NUMBER], x: cx, y: cy, z: cz };
-        let block = Block::new(1);
+        let mut chunk = Chunk { blocks: [BlockInstance::air(); CHUNK_BLOCK_NUMBER], x: cx, y: cy, z: cz };
+        let block = BlockInstance::new(1);
 
         // On génère pour l'instant un flat sur la couche y: 0 avec un id bidon pour qu'on ne le mélange pas à l'air et qu'on crée des blocs solides et visibles
         // Pour l'instant on s'en fout des cos du chunk, ça servira plus tard pour des trucs style biomes, température, etc
@@ -73,14 +73,12 @@ impl Chunk {
 
     /// Abstraction of `get_block_from_i` but with components.
     /// 
-    /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time.
-    #[inline(always)]
-    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> Block {
+    /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time. 
+    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
         return self.get_block_from_i((x + y * CHUNK_SIZE + z * CHUNK_SIZE_SQR) as usize);
     }
-    
-    #[inline(always)]
-    pub fn get_block_from_i(&self, i: usize) -> Block {
+
+    pub fn get_block_from_i(&self, i: usize) -> BlockInstance {
         return self.blocks[i];
     }
 
@@ -88,12 +86,12 @@ impl Chunk {
     /// 
     /// Prefer using `set_block_from_i` whenever possible, as it saves computing power and time. 
     #[inline(always)]
-    pub fn set_block_from_xyz(&mut self, x: i32, y: i32, z: i32, block: Block) {
+    pub fn set_block_from_xyz(&mut self, x: i32, y: i32, z: i32, block: BlockInstance) {
         self.set_block_from_i((x + y * CHUNK_SIZE + z * CHUNK_SIZE_SQR) as usize, block);
     }
 
     #[inline(always)]
-    pub fn set_block_from_i(&mut self, i: usize, block: Block) {
+    pub fn set_block_from_i(&mut self, i: usize, block: BlockInstance) {
         self.blocks[i] = block;
     }
 }
@@ -101,7 +99,7 @@ impl Chunk {
 impl PaddedChunk {
     pub fn empty() -> PaddedChunk {
         return PaddedChunk {
-            blocks: [Block::air(); PADDED_CHUNK_BLOCK_NUMBER],
+            blocks: [BlockInstance::air(); PADDED_CHUNK_BLOCK_NUMBER],
         }
     }
 
@@ -145,12 +143,12 @@ impl PaddedChunk {
     /// 
     /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time.
     #[inline(always)]
-    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> Block {
+    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
         return self.get_block_from_i((x + y * PADDED_CHUNK_SIZE + z * PADDED_CHUNK_SIZE_SQR) as usize);
     }
     
     #[inline(always)]
-    pub fn get_block_from_i(&self, i: usize) -> Block {
+    pub fn get_block_from_i(&self, i: usize) -> BlockInstance {
         return self.blocks[i];
     }
 
@@ -158,12 +156,12 @@ impl PaddedChunk {
     /// 
     /// Prefer using `set_block_from_i` whenever possible, as it saves computing power and time. 
     #[inline(always)]
-    fn set_block_from_xyz(&mut self, x: i32, y: i32, z: i32, block: Block) {
+    fn set_block_from_xyz(&mut self, x: i32, y: i32, z: i32, block: BlockInstance) {
         self.set_block_from_i((x + y * PADDED_CHUNK_SIZE + z * PADDED_CHUNK_SIZE_SQR) as usize, block);
     }
 
     #[inline(always)]
-    fn set_block_from_i(&mut self, i: usize, block: Block) {
+    fn set_block_from_i(&mut self, i: usize, block: BlockInstance) {
         self.blocks[i] = block;
     }
 
@@ -274,7 +272,7 @@ impl World {
         return chunks;
     }
 
-    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> Block {
+    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
         // Chunk coordinates
         let cx: i32 = x.div_euclid(CHUNK_SIZE);
         let cy: i32 = y.div_euclid(CHUNK_SIZE);
@@ -290,11 +288,11 @@ impl World {
         }
         else {
             // If the chunk does not exist / is not found, return air (useful for rendering purpose mainly)
-            return Block::air();
+            return BlockInstance::air();
         }
     }
 
-    pub fn get_local_block_from_xyz(&self, lx: i32, ly: i32, lz: i32, cx: i32, cy: i32, cz: i32) -> Block {
+    pub fn get_local_block_from_xyz(&self, lx: i32, ly: i32, lz: i32, cx: i32, cy: i32, cz: i32) -> BlockInstance {
         if !(0..CHUNK_SIZE).contains(&lx)
             || !(0..CHUNK_SIZE).contains(&ly)
             || !(0..CHUNK_SIZE).contains(&lz) {
@@ -309,7 +307,7 @@ impl World {
             return chunk.get_block_from_xyz(lx, ly, lz);
         }
         else {
-            return Block::air();
+            return BlockInstance::air();
         }
     }
 }

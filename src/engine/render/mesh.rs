@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use cgmath::num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-use crate::{player::Player, world::{Block, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, FIRST_PADDED_CHUNK_AXIS_INDEX, LAST_CHUNK_AXIS_INDEX, LAST_PADDED_CHUNK_AXIS_INDEX, PADDED_CHUNK_SIZE, PaddedChunk, World}};
+use crate::{player::Player, world::{BlockInstance, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, FIRST_PADDED_CHUNK_AXIS_INDEX, LAST_CHUNK_AXIS_INDEX, LAST_PADDED_CHUNK_AXIS_INDEX, PADDED_CHUNK_SIZE, PaddedChunk, World}};
 use crate::engine::render::geometry::Vertex;
 
 const X: f32 = 1.0;
@@ -23,15 +23,91 @@ const V_111: [f32; 3] = [ X ,  Y ,  Z ];
 const V_011: [f32; 3] = [0.0,  Y ,  Z ];
 
 #[repr(u8)]
-#[derive(PartialEq)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Face {
-    Above,
-    Below,
-    Left,
-    Right,
-    Front,
-    Back,
+    Above = 0,
+    Below = 1,
+    Left  = 2,
+    Right = 3,
+    Front = 4,
+    Back  = 5,
+}
+
+#[derive(Clone, Copy)]
+struct FaceMask {
+    data: u64
+}
+
+const VISITED_SHIFT: u64 = 63;
+const BLOCK_ID_SHIFT: u64 = 31;
+const BLOCK_ID_MASK: u64 = 0xFFFF_FFFF;
+const FACE_MASK: u64 = 0b111;
+
+impl Face {
+    #[inline(always)]
+    fn from_bits_unchecked(v: u8) -> Self {
+        debug_assert!(v < 6);
+        unsafe { std::mem::transmute(v) }
+    }
+}
+
+impl FaceMask {
+
+    #[inline(always)]
+    fn empty() -> FaceMask {
+        return FaceMask {
+            data: 0u64,
+        };
+    }
+
+    fn from(visited: bool, id: u32, face: Face) -> FaceMask {
+        let mut mask = FaceMask {
+            data: 0u64
+        };
+        mask.set_visited(visited);
+        mask.set_block_id(id);
+        mask.set_face(face);
+        return mask;
+    }
+
+    fn to(&self) -> (bool, u32, Face) {
+        return (self.get_visited(), self.get_block_id(), self.get_face());
+    }
+
+    #[inline(always)]
+    fn get_visited(self) -> bool {
+        (self.data >> VISITED_SHIFT) != 0
+    }
+
+    #[inline(always)]
+    fn set_visited(&mut self, v: bool) {
+        self.data ^= (-(v as i64) as u64 ^ self.data)
+            & (1 << VISITED_SHIFT);
+    }
+
+    #[inline(always)]
+    fn get_block_id(self) -> u32 {
+        ((self.data >> BLOCK_ID_SHIFT) & BLOCK_ID_MASK) as u32
+    }
+
+    #[inline(always)]
+    fn set_block_id(&mut self, id: u32) {
+        self.data =
+            (self.data & !(BLOCK_ID_MASK << BLOCK_ID_SHIFT))
+            | ((id as u64) << BLOCK_ID_SHIFT);
+    }
+
+    #[inline(always)]
+    fn get_face(self) -> Face {
+        Face::from_bits_unchecked((self.data & FACE_MASK) as u8)
+    }
+
+    #[inline(always)]
+    fn set_face(&mut self, face: Face) {
+        self.data =
+            (self.data & !FACE_MASK)
+            | (face as u64);
+    }
 }
 
 pub struct ChunkMesh {
@@ -121,7 +197,7 @@ impl ChunkMesh {
         let offset_y = cy * CHUNK_SIZE;
         let offset_z = cz * CHUNK_SIZE;
 
-        let mut block: Block;
+        let mut block: BlockInstance;
         for lz in 0..CHUNK_SIZE {
             let iz = lz * CHUNK_SIZE_SQR;
             for ly in 0..CHUNK_SIZE {
@@ -223,10 +299,11 @@ impl ChunkMesh {
         let offset_z = cz * CHUNK_SIZE;
 
         // We allocate once to avoid memory reallocation/destruction.
-        let mut mask: [[Option<(i32, Face)>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+        let mut mask: [[FaceMask; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[FaceMask::empty(); CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
+        // let mut mask: [[Option<(u32, Face)>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         
-        let mut previous: Block;
-        let mut current: Block;
+        let mut previous: BlockInstance;
+        let mut current: BlockInstance;
 
         // Todo:
         // - replace world.get_block by chunk.get_block whenever possible
@@ -244,13 +321,16 @@ impl ChunkMesh {
 
                     match (previous.is_air(), current.is_air()) {
                         (true, true) | (false, false) => {
-                            mask[y as usize][z as usize] = None;
+                            mask[y as usize][z as usize].set_visited(true);
+                            // continue;
                         }
                         (true, false) => {
-                            mask[y as usize][z as usize] = Some((current.id, Face::Left));
+                            mask[y as usize][z as usize] = FaceMask::from(false, current.id, Face::Left);
+                            // mask[y as usize][z as usize] = Some((current.id, Face::Left));
                         }
                         (false, true) => {
-                            mask[y as usize][z as usize] = Some((previous.id, Face::Right));
+                            mask[y as usize][z as usize] = FaceMask::from(false, previous.id, Face::Right);
+                            // mask[y as usize][z as usize] = Some((previous.id, Face::Right));
                         }
                     }
                 }
@@ -260,35 +340,48 @@ impl ChunkMesh {
             for y in 0..CHUNK_SIZE {
                 let mut z = 0;
                 while z < CHUNK_SIZE {
-                    let Some(face) = mask[y as usize][z as usize] else {
+                    let face = mask[y as usize][z as usize];
+                    if face.get_visited() {
                         z += 1;
                         continue;
-                    };
+                    }
+                    // let Some(face) = mask[y as usize][z as usize] else {
+                    //     z += 1;
+                    //     continue;
+                    // };
+
+                    mask[y as usize][z as usize].set_visited(true);
 
                     let mut quad_y = 1;
                     let mut quad_z = 1;
 
                     // We grow the quad in the y-axis
-                    'outer: for iy in (y+1)..CHUNK_SIZE {
-                        if mask[iy as usize][z as usize] != Some(face) {
+                    'outer: for iy in (y as usize+1)..(CHUNK_SIZE as usize) as usize {
+                        if mask[iy][z as usize].get_visited() || mask[iy][z as usize].data != face.data {
                             break 'outer;
                         }
                         quad_y += 1;
+                        // Clear from the mask
+                        mask[iy][z as usize].set_visited(true);
                     }
 
                     // We grow the quad in the z-axis
                     'outer: for iz in (z+1)..CHUNK_SIZE {
                         // We check if every face in the y is compatible with our expansion, and if not, we stop it
                         for iy in y..(y + quad_y) {
-                            if mask[iy as usize][iz as usize] != Some(face) {
+                            if mask[iy as usize][iz as usize].get_visited() || mask[iy as usize][iz as usize].data != face.data {
                                 break 'outer;
                             }
                         }
                         quad_z += 1;
+                        // Clear this space from the mask since we expand
+                        for iy in (y as usize)..(y + quad_y) as usize {
+                            mask[iy][iz as usize].set_visited(true);
+                        }
                     }
 
                     // Add the quad to the mesh
-                    let is_left_face = face.1 == Face::Left;
+                    let is_left_face = face.get_face() == Face::Left;
                     
                     let x = (x - 1 + offset_x + (is_left_face as i32)) as f32;
                     let y0 = (y + offset_y) as f32;
@@ -310,13 +403,6 @@ impl ChunkMesh {
                         mesh.vertices.extend_from_slice(&[
                             v1, v3, v2, v1, v2, v4
                         ]);
-                    }
-
-                    // Clear the quad from the mask to avoid vertex dupplication
-                    for iy in y..(y + quad_y) {
-                        for iz in z..(z + quad_z) {
-                            mask[iy as usize][iz as usize] = None;
-                        }
                     }
 
                     // We can at least skip that part, knowing itering over this small part of the quad won't result in anything
