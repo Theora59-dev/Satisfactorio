@@ -3,7 +3,11 @@ use std::{collections::HashMap, sync::Arc};
 use cgmath::num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
+<<<<<<< Updated upstream
 use crate::{player::Player, world::{BlockInstance, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, FIRST_PADDED_CHUNK_AXIS_INDEX, LAST_CHUNK_AXIS_INDEX, LAST_PADDED_CHUNK_AXIS_INDEX, PADDED_CHUNK_SIZE, PaddedChunk, World}};
+=======
+use crate::{player::Player, world::{BlockInstance, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, LAST_CHUNK_BLOCK_INDEX, World}};
+>>>>>>> Stashed changes
 use crate::engine::render::geometry::Vertex;
 
 const X: f32 = 1.0;
@@ -302,12 +306,17 @@ impl ChunkMesh {
         let mut mask: [[FaceMask; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[FaceMask::empty(); CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         // let mut mask: [[Option<(u32, Face)>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         
+<<<<<<< Updated upstream
         let mut previous: BlockInstance;
         let mut current: BlockInstance;
 
         // Todo:
         // - replace world.get_block by chunk.get_block whenever possible
         // - check if the block is in the chunk before adding it to the mask
+=======
+        let mut current: BlockInstance;
+        let mut next: BlockInstance;
+>>>>>>> Stashed changes
         
         let padded_chunk = PaddedChunk::new(chunk, world);
 
@@ -357,12 +366,20 @@ impl ChunkMesh {
 
                     // We grow the quad in the y-axis
                     'outer: for iy in (y as usize+1)..(CHUNK_SIZE as usize) as usize {
+<<<<<<< Updated upstream
                         if mask[iy][z as usize].get_visited() || mask[iy][z as usize].data != face.data {
+=======
+                        if mask[iy][z as usize] != Some(face) {
+>>>>>>> Stashed changes
                             break 'outer;
                         }
                         quad_y += 1;
                         // Clear from the mask
+<<<<<<< Updated upstream
                         mask[iy][z as usize].set_visited(true);
+=======
+                        mask[iy][z as usize] = None;
+>>>>>>> Stashed changes
                     }
 
                     // We grow the quad in the z-axis
@@ -376,7 +393,11 @@ impl ChunkMesh {
                         quad_z += 1;
                         // Clear this space from the mask since we expand
                         for iy in (y as usize)..(y + quad_y) as usize {
+<<<<<<< Updated upstream
                             mask[iy][iz as usize].set_visited(true);
+=======
+                            mask[iy][iz as usize] = None;
+>>>>>>> Stashed changes
                         }
                     }
 
@@ -404,10 +425,13 @@ impl ChunkMesh {
                             v1, v3, v2, v1, v2, v4
                         ]);
                     }
+<<<<<<< Updated upstream
 
                     // We can at least skip that part, knowing itering over this small part of the quad won't result in anything
                     // Skipping quad_y will probably makes us lose vertex in the process, this is why we just skip z.
                     z += quad_z;
+=======
+>>>>>>> Stashed changes
                 }
             }
         }
