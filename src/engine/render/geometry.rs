@@ -54,12 +54,18 @@ impl Vertex {
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Face {
+pub enum Direction {
+    /// +Y
     Above = 0,
+    /// -Y
     Below = 1,
+    /// -X
     Left  = 2,
+    /// +X
     Right = 3,
+    /// +Z
     Front = 4,
+    /// -Z
     Back  = 5,
 }
 
@@ -73,7 +79,7 @@ const BLOCK_ID_SHIFT: u64 = 31;
 const BLOCK_ID_MASK: u64 = 0xFFFF_FFFF;
 const FACE_MASK: u64 = 0b111;
 
-impl Face {
+impl Direction {
     #[inline(always)]
     pub fn from_bits_unchecked(v: u8) -> Self {
         debug_assert!(v < 6);
@@ -94,7 +100,7 @@ impl FaceMask {
         };
     }
 
-    pub fn from(visited: bool, id: u32, face: Face) -> FaceMask {
+    pub fn from(visited: bool, id: u32, face: Direction) -> FaceMask {
         let mut mask = FaceMask::empty();
         mask.set_visited(visited);
         mask.set_block_id(id);
@@ -102,7 +108,7 @@ impl FaceMask {
         return mask;
     }
 
-    pub fn to(&self) -> (bool, u32, Face) {
+    pub fn to(&self) -> (bool, u32, Direction) {
         return (self.get_visited(), self.get_block_id(), self.get_face());
     }
 
@@ -130,12 +136,12 @@ impl FaceMask {
     }
 
     #[inline(always)]
-    pub fn get_face(self) -> Face {
-        Face::from_bits_unchecked((self.data & FACE_MASK) as u8)
+    pub fn get_face(self) -> Direction {
+        Direction::from_bits_unchecked((self.data & FACE_MASK) as u8)
     }
 
     #[inline(always)]
-    pub fn set_face(&mut self, face: Face) {
+    pub fn set_face(&mut self, face: Direction) {
         self.data =
             (self.data & !FACE_MASK)
             | (face as u64);

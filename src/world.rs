@@ -15,18 +15,13 @@ pub const LAST_PADDED_CHUNK_CENTER_INDEX: i32 = PADDED_CHUNK_SIZE - 2;
 pub const FIRST_PADDED_CHUNK_AXIS_INDEX: i32 = 0;
 pub const LAST_PADDED_CHUNK_AXIS_INDEX: i32 = PADDED_CHUNK_SIZE - 1;
 
-<<<<<<< Updated upstream
 #[derive(Clone, Copy)]
-=======
-#[derive(Clone)]
->>>>>>> Stashed changes
 pub struct BlockInstance {
     pub id: u32
 }
 
 pub struct Chunk {
     blocks: [BlockInstance; CHUNK_BLOCK_NUMBER],
-<<<<<<< Updated upstream
     x: i32,
     y: i32,
     z: i32
@@ -34,8 +29,6 @@ pub struct Chunk {
 
 pub struct PaddedChunk {
     blocks: [BlockInstance; PADDED_CHUNK_BLOCK_NUMBER],
-=======
->>>>>>> Stashed changes
 }
 
 pub struct World {
@@ -62,11 +55,7 @@ impl BlockInstance {
 
 impl Chunk {
     pub fn generate(cx: i32, cy: i32, cz: i32) -> Chunk {
-<<<<<<< Updated upstream
         let mut chunk = Chunk { blocks: [BlockInstance::air(); CHUNK_BLOCK_NUMBER], x: cx, y: cy, z: cz };
-=======
-        let mut chunk = Chunk { blocks: [BlockInstance::air(); CHUNK_BLOCK_NUMBER] };
->>>>>>> Stashed changes
         let block = BlockInstance::new(1);
 
         // On génère pour l'instant un flat sur la couche y: 0 avec un id bidon pour qu'on ne le mélange pas à l'air et qu'on crée des blocs solides et visibles
@@ -96,15 +85,11 @@ impl Chunk {
     /// Abstraction of `set_block_from_i` but with components.
     /// 
     /// Prefer using `set_block_from_i` whenever possible, as it saves computing power and time. 
-<<<<<<< Updated upstream
     #[inline(always)]
-=======
->>>>>>> Stashed changes
     pub fn set_block_from_xyz(&mut self, x: i32, y: i32, z: i32, block: BlockInstance) {
         self.set_block_from_i((x + y * CHUNK_SIZE + z * CHUNK_SIZE_SQR) as usize, block);
     }
 
-<<<<<<< Updated upstream
     #[inline(always)]
     pub fn set_block_from_i(&mut self, i: usize, block: BlockInstance) {
         self.blocks[i] = block;
@@ -247,10 +232,6 @@ impl PaddedChunk {
         if let Some(pos_z) = pos_z {
             self.fill_pos_z(pos_z);
         };
-=======
-    pub fn set_block_from_i(&mut self, i: usize, block: BlockInstance) {
-        self.blocks[i] = block;
->>>>>>> Stashed changes
     }
 }
 

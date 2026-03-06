@@ -325,15 +325,15 @@ impl State {
             .collect::<Vec<Vertex>>();
 
         let gizmo = [
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-            Vertex::new_with_rgb(1.0, 0.25, 0.0, 1.0, 0.0, 0.0),
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 1.0, 0.0),
-            Vertex::new_with_rgb(0.0, 1.0, 0.0, 0.0, 1.0, 0.0),
-            Vertex::new_with_rgb(0.25, 1.0, 0.25, 0.0, 1.0, 0.0),
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
-            Vertex::new_with_rgb(0.0, 0.0, 1.0, 0.0, 0.0, 1.0),
-            Vertex::new_with_rgb(0.0, 0.25, 1.0, 0.0, 0.0, 1.0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
+            Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
+            Vertex::new_with_rgb(1.0, 0.25, 0.0, 1.0, 0.0, 0.0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0),
+            Vertex::new_with_rgb(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0),
+            Vertex::new_with_rgb(0.25, 1.0, 0.25, 0.0, 1.0, 0.0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0),
+            Vertex::new_with_rgb(0.0, 0.25, 1.0, 0.0, 0.0, 1.0, 0),
         ];
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

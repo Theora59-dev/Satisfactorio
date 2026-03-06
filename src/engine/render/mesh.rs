@@ -3,15 +3,8 @@ use std::{collections::HashMap, sync::Arc};
 use cgmath::num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
 use crate::{player::Player, world::{BlockInstance, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, FIRST_PADDED_CHUNK_AXIS_INDEX, LAST_CHUNK_AXIS_INDEX, LAST_PADDED_CHUNK_AXIS_INDEX, PADDED_CHUNK_SIZE, PaddedChunk, World}};
-=======
-use crate::{player::Player, world::{BlockInstance, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, LAST_CHUNK_BLOCK_INDEX, World}};
->>>>>>> Stashed changes
-=======
-use crate::{engine::render::geometry::{Face, FaceMask}, player::Player, world::{BlockInstance, CHUNK_SIZE, CHUNK_SIZE_SQR, Chunk, FIRST_PADDED_CHUNK_AXIS_INDEX, LAST_CHUNK_AXIS_INDEX, LAST_PADDED_CHUNK_AXIS_INDEX, PADDED_CHUNK_SIZE, PaddedChunk, World}};
->>>>>>> bce0e3c2419c0429fd6c31bbc9b680a7c52484e8
+use crate::engine::render::geometry::{Direction, FaceMask};
 use crate::engine::render::geometry::Vertex;
 
 pub struct ChunkMesh {
@@ -38,20 +31,8 @@ impl ChunkMesh {
         let mut mask: [[FaceMask; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[FaceMask::empty(); CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         // let mut mask: [[Option<(u32, Face)>; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] = [[None; CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
         
-<<<<<<< Updated upstream
         let mut previous: BlockInstance;
         let mut current: BlockInstance;
-<<<<<<< HEAD
-
-        // Todo:
-        // - replace world.get_block by chunk.get_block whenever possible
-        // - check if the block is in the chunk before adding it to the mask
-=======
-        let mut current: BlockInstance;
-        let mut next: BlockInstance;
->>>>>>> Stashed changes
-=======
->>>>>>> bce0e3c2419c0429fd6c31bbc9b680a7c52484e8
         
         let padded_chunk = PaddedChunk::new(chunk, world);
 
@@ -69,11 +50,11 @@ impl ChunkMesh {
                             continue;
                         }
                         (true, false) => {
-                            mask[y as usize][z as usize] = FaceMask::from(false, current.id, Face::Left);
+                            mask[y as usize][z as usize] = FaceMask::from(false, current.id, Direction::Left);
                             // mask[y as usize][z as usize] = Some((current.id, Face::Left));
                         }
                         (false, true) => {
-                            mask[y as usize][z as usize] = FaceMask::from(false, previous.id, Face::Right);
+                            mask[y as usize][z as usize] = FaceMask::from(false, previous.id, Direction::Right);
                             // mask[y as usize][z as usize] = Some((previous.id, Face::Right));
                         }
                     }
@@ -101,20 +82,12 @@ impl ChunkMesh {
 
                     // We grow the quad in the y-axis
                     'outer: for iy in (y as usize+1)..(CHUNK_SIZE as usize) as usize {
-<<<<<<< Updated upstream
                         if mask[iy][z as usize].get_visited() || mask[iy][z as usize].data != face.data {
-=======
-                        if mask[iy][z as usize] != Some(face) {
->>>>>>> Stashed changes
                             break 'outer;
                         }
                         quad_y += 1;
                         // Clear from the mask
-<<<<<<< Updated upstream
                         mask[iy][z as usize].set_visited(true);
-=======
-                        mask[iy][z as usize] = None;
->>>>>>> Stashed changes
                     }
 
                     // We grow the quad in the z-axis
@@ -128,16 +101,12 @@ impl ChunkMesh {
                         quad_z += 1;
                         // Clear this space from the mask since we expand
                         for iy in (y as usize)..(y + quad_y) as usize {
-<<<<<<< Updated upstream
                             mask[iy][iz as usize].set_visited(true);
-=======
-                            mask[iy][iz as usize] = None;
->>>>>>> Stashed changes
                         }
                     }
 
                     // Add the quad to the mesh
-                    let is_left_face = face.get_face() == Face::Left;
+                    let is_left_face = face.get_face() == Direction::Left;
                     
                     let x = (x + offset_x) as f32;
                     let y0 = (y + offset_y) as f32;
@@ -145,10 +114,10 @@ impl ChunkMesh {
                     let z0 = (z + offset_z) as f32;
                     let z1 = (z + quad_z + offset_z) as f32;
 
-                    let v1 = Vertex::new(x, y0, z0);
-                    let v2 = Vertex::new(x, y1, z1);
-                    let v3 = Vertex::new(x, y1, z0);
-                    let v4 = Vertex::new(x, y0, z1);
+                    let v1 = Vertex::new(x, y0, z0, 0);
+                    let v2 = Vertex::new(x, y1, z1, 0);
+                    let v3 = Vertex::new(x, y1, z0, 0);
+                    let v4 = Vertex::new(x, y0, z1, 0);
 
                     if is_left_face {
                         mesh.vertices.extend_from_slice(&[
@@ -160,13 +129,10 @@ impl ChunkMesh {
                             v1, v3, v2, v1, v2, v4
                         ]);
                     }
-<<<<<<< Updated upstream
 
                     // We can at least skip that part, knowing itering over this small part of the quad won't result in anything
                     // Skipping quad_y will probably makes us lose vertex in the process, this is why we just skip z.
                     z += quad_z;
-=======
->>>>>>> Stashed changes
                 }
             }
         }
@@ -185,11 +151,11 @@ impl ChunkMesh {
                             continue;
                         }
                         (true, false) => {
-                            mask[x as usize][z as usize] = FaceMask::from(false, current.id, Face::Below);
+                            mask[x as usize][z as usize] = FaceMask::from(false, current.id, Direction::Below);
                             // mask[y as usize][z as usize] = Some((current.id, Face::Left));
                         }
                         (false, true) => {
-                            mask[x as usize][z as usize] = FaceMask::from(false, previous.id, Face::Above);
+                            mask[x as usize][z as usize] = FaceMask::from(false, previous.id, Direction::Above);
                             // mask[y as usize][z as usize] = Some((previous.id, Face::Right));
                         }
                     }
@@ -241,7 +207,7 @@ impl ChunkMesh {
                     }
 
                     // Add the quad to the mesh
-                    let is_above_face = face.get_face() == Face::Above;
+                    let is_above_face = face.get_face() == Direction::Above;
 
                     let y = (y + offset_y) as f32;
                     let x0 = (x + offset_x) as f32;
@@ -249,10 +215,10 @@ impl ChunkMesh {
                     let z0 = (z + offset_z) as f32;
                     let z1 = (z + quad_z + offset_z) as f32;
 
-                    let v1 = Vertex::new(x0, y, z0);
-                    let v2 = Vertex::new(x1, y, z1);
-                    let v3 = Vertex::new(x1, y, z0);
-                    let v4 = Vertex::new(x0, y, z1);
+                    let v1 = Vertex::new(x0, y, z0, 0);
+                    let v2 = Vertex::new(x1, y, z1, 0);
+                    let v3 = Vertex::new(x1, y, z0, 0);
+                    let v4 = Vertex::new(x0, y, z1, 0);
 
                     if is_above_face {
                         mesh.vertices.extend_from_slice(&[
@@ -286,11 +252,11 @@ impl ChunkMesh {
                             continue;
                         }
                         (true, false) => {
-                            mask[x as usize][y as usize] = FaceMask::from(false, current.id, Face::Back);
+                            mask[x as usize][y as usize] = FaceMask::from(false, current.id, Direction::Back);
                             // mask[y as usize][z as usize] = Some((current.id, Face::Left));
                         }
                         (false, true) => {
-                            mask[x as usize][y as usize] = FaceMask::from(false, previous.id, Face::Front);
+                            mask[x as usize][y as usize] = FaceMask::from(false, previous.id, Direction::Front);
                             // mask[y as usize][z as usize] = Some((previous.id, Face::Right));
                         }
                     }
@@ -349,12 +315,12 @@ impl ChunkMesh {
                     let y0 = (y + offset_y) as f32;
                     let y1 = (y + quad_y + offset_y) as f32;
 
-                    let v1 = Vertex::new(x0, y0, z);
-                    let v2 = Vertex::new(x1, y0, z);
-                    let v3 = Vertex::new(x1, y1, z);
-                    let v4 = Vertex::new(x0, y1, z);
+                    let v1 = Vertex::new(x0, y0, z, 0);
+                    let v2 = Vertex::new(x1, y0, z, 0);
+                    let v3 = Vertex::new(x1, y1, z, 0);
+                    let v4 = Vertex::new(x0, y1, z, 0);
 
-                    let is_front = face.get_face() == Face::Front;
+                    let is_front = face.get_face() == Direction::Front;
 
                     if is_front {
                         mesh.vertices.extend_from_slice(&[
