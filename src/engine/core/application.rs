@@ -4,7 +4,7 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::{application::ApplicationHandler, keyboard::PhysicalKey};
 
 use crate::engine::core::state::State;
-use winit::event::{KeyEvent, WindowEvent};
+use winit::event::{DeviceEvent, DeviceId, KeyEvent, WindowEvent};
 use winit::window::Window;
 
 struct App {
@@ -83,6 +83,22 @@ impl ApplicationHandler<State> for App {
             );
         }
         self.state = Some(event);
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: DeviceId,
+        event: DeviceEvent,
+    ) {
+        let state = match &mut self.state {
+            Some(state) => state,
+            None => return,
+        };
+
+        if let DeviceEvent::MouseMotion { delta } = event {
+            state.camera_controller.process_mouse(delta.0, delta.1);
+        }
     }
 
     fn window_event(

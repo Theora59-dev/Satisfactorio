@@ -1,16 +1,16 @@
 use crate::engine::render::camera::{Camera, CameraController, CameraUniform};
-use crate::engine::render::geometry::{Vertex};
+use crate::engine::render::geometry::Vertex;
+use crate::engine::render::mesh::{ChunkMesh, WorldMesh};
 use crate::player::Player;
-use crate::world::{CHUNK_SIZE, Chunk, World};
+use crate::world::{Chunk, World, CHUNK_SIZE};
+use cgmath::num_traits::ToPrimitive;
+use cgmath::{dot, InnerSpace, Vector3};
 use std::sync::Arc;
 use std::time::{self, Instant};
-use cgmath::{Vector3, dot};
-use cgmath::num_traits::ToPrimitive;
 use wgpu::util::DeviceExt;
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::KeyCode;
 use winit::window::Window;
-use crate::engine::render::mesh::{ChunkMesh, WorldMesh};
 
 // This will store the state of our game
 pub struct State {
@@ -30,11 +30,11 @@ pub struct State {
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    camera_controller: CameraController,
+    pub camera_controller: CameraController,
     world: World,
     player: Player,
     world_mesh: WorldMesh,
-    num_vertex: u32
+    num_vertex: u32,
 }
 
 impl State {
@@ -79,7 +79,7 @@ impl State {
             .await?;
 
         let surface_caps = surface.get_capabilities(&adapter);
-        
+
         // Shader code in this tutorial assumes an sRGB surface texture. Using a different
         // one will result in all the colors coming out darker. If you want to support non
         // sRGB surfaces, you'll need to account for that when drawing to the frame.
@@ -192,7 +192,7 @@ impl State {
             label: Some("camera_bind_group"),
         });
 
-        let camera_controller = CameraController::new(0.5);
+        let camera_controller = CameraController::new(0.2, 0.002);
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -251,6 +251,7 @@ impl State {
             cache: None,
         });
 
+<<<<<<< HEAD
         let gizmo_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -294,6 +295,53 @@ impl State {
             cache: None,
         });
         
+=======
+        let gizmo_render_pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[Vertex::buffer_layout()],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        // 4.
+                        format: config.format,
+                        blend: Some(wgpu::BlendState::REPLACE),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::LineList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: None,
+                    // cull_mode: Some(wgpu::Face::Back),
+                    // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    // Requires Features::DEPTH_CLIP_CONTROL
+                    unclipped_depth: false,
+                    // Requires Features::CONSERVATIVE_RASTERIZATION
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                multiview_mask: None,
+                cache: None,
+            });
+
+        let mut world = World::new();
+>>>>>>> 408a460 (Ajout des movement joueurs + cam)
         let player = Player::new();
 
         let world_start = Instant::now();
@@ -317,13 +365,20 @@ impl State {
 
         let world_mesh = WorldMesh::update(&device, &world, &player, &WorldMesh::new());
 
-        println!("Time to make meshes: {:.3}ms.", start.elapsed().as_micros().to_f64().unwrap() / 1_000.0);
+        println!(
+            "Time to make meshes: {:.3}ms.",
+            start.elapsed().as_micros().to_f64().unwrap() / 1_000.0
+        );
 
         // let flat_vertices: Vec<Vertex> = vertices
         //     .meshes
         //     .iter()
         //     .flat_map(|chunk| chunk.1.vertices.clone())
-        //     .collect::<Vec<Vertex>>();
+        //     .c            // let cam_forward = Vector3::new(
+        //     self.camera.target.x - self.camera.eye.x,
+        //     self.camera.target.y - self.camera.eye.y,
+        //     self.camera.target.z - self.camera.eye.z,
+        // );ollect::<Vec<Vertex>>();
 
         let gizmo = [
             Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
@@ -352,6 +407,11 @@ impl State {
         //     usage: wgpu::BufferUsages::INDEX,
         // });
 
+        window
+            .set_cursor_grab(winit::window::CursorGrabMode::Confined)
+            .expect("Capture souris");
+        window.set_cursor_visible(false);
+
         Ok(Self {
             surface,
             device,
@@ -372,7 +432,7 @@ impl State {
             num_vertex: (vec![] as Vec<Vertex>).len() as u32,
             gizmo_buffer,
             gizmo_render_pipeline,
-            world_mesh
+            world_mesh,
         })
     }
 
@@ -386,7 +446,45 @@ impl State {
     }
 
     pub fn update(&mut self) {
-        self.camera_controller.update_camera(&mut self.camera);
+        let forward = self.camera.forward();
+        let right = self.camera.right();
+        let up = cgmath::Vector3::unit_y();
+        let mut direction = Vector3::new(0.0, 0.0, 0.0);
+
+        if self.camera_controller.is_forward_pressed {
+            direction += forward;
+        }
+        if self.camera_controller.is_backward_pressed {
+            direction -= forward;
+        }
+        if self.camera_controller.is_right_pressed {
+            direction += right;
+        }
+        if self.camera_controller.is_left_pressed {
+            direction -= right;
+        }
+        if self.camera_controller.is_up_pressed {
+            direction += up;
+        }
+        if self.camera_controller.is_down_pressed {
+            direction -= up;
+        }
+
+        if direction.magnitude2() > 0.0 {
+            self.player.vel = direction.normalize() * self.camera_controller.speed;
+        } else {
+            self.player.vel = Vector3::new(0.0, 0.0, 0.0);
+        }
+
+        println!(
+            ">>> INFO: Position joueur: x={:.2}, y={:.2}, z={:.2} | position caméra: x={:.2}, y={:.2}, z={:.2}",
+            self.player.pos.x, self.player.pos.y, self.player.pos.z,
+            self.camera.eye.x, self.camera.eye.y, self.camera.eye.z
+        );
+
+        self.player.update();
+        self.camera_controller
+            .update_camera(&mut self.camera, &self.player);
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(
             &self.camera_buffer,
@@ -441,37 +539,28 @@ impl State {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-            
+
             let mut front_chunks: Vec<&ChunkMesh> = vec![];
 
-            let cam_forward = Vector3::new(
-                self.camera.target.x - self.camera.eye.x,
-                self.camera.target.y  - self.camera.eye.y,
-                self.camera.target.z  - self.camera.eye.z
-            );
-
-            let cam_eye = Vector3::new(
-                self.camera.eye.x,
-                self.camera.eye.y,
-                self.camera.eye.z
-            );
+            let cam_forward = self.camera.forward();
+            let cam_eye = Vector3::new(self.camera.eye.x, self.camera.eye.y, self.camera.eye.z);
 
             for chunk_mesh in &self.world_mesh.meshes {
                 let min = Vector3::new(
-                    (chunk_mesh.0.0) as f32 * CHUNK_SIZE as f32,
-                    (chunk_mesh.0.1) as f32 * CHUNK_SIZE as f32,
-                    (chunk_mesh.0.2) as f32 * CHUNK_SIZE as f32,
+                    (chunk_mesh.0 .0) as f32 * CHUNK_SIZE as f32,
+                    (chunk_mesh.0 .1) as f32 * CHUNK_SIZE as f32,
+                    (chunk_mesh.0 .2) as f32 * CHUNK_SIZE as f32,
                 );
-                let max = min + Vector3::new(CHUNK_SIZE as f32, CHUNK_SIZE as f32, CHUNK_SIZE as f32);
+                let max =
+                    min + Vector3::new(CHUNK_SIZE as f32, CHUNK_SIZE as f32, CHUNK_SIZE as f32);
 
                 let center = min + (max - min) * 0.5;
 
                 let extent = (max - min) * 0.5;
 
-                let radius =
-                    extent.x * cam_forward.x.abs() +
-                    extent.y * cam_forward.y.abs() +
-                    extent.z * cam_forward.z.abs();
+                let radius = extent.x * cam_forward.x.abs()
+                    + extent.y * cam_forward.y.abs()
+                    + extent.z * cam_forward.z.abs();
 
                 let distance = dot(cam_forward, center - cam_eye);
 
@@ -487,7 +576,7 @@ impl State {
             for chunk_mesh in front_chunks {
                 render_pass.set_vertex_buffer(0, chunk_mesh.vertex_buffer.slice(..));
                 // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
-                render_pass.draw(0..chunk_mesh.vertices_count, 0..1);    
+                render_pass.draw(0..chunk_mesh.vertices_count, 0..1);
             }
 
             // render_pass.draw(0..self.num_vertex, 0..1);
@@ -508,8 +597,7 @@ impl State {
     pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         if code == KeyCode::Escape && is_pressed {
             event_loop.exit();
-        }
-        else {
+        } else {
             self.camera_controller.handle_key(code, is_pressed);
         }
     }
