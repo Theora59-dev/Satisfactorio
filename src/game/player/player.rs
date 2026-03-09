@@ -2,7 +2,7 @@ use crate::game::world::chunk::CHUNK_SIZE;
 use cgmath::num_traits::ToPrimitive;
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
-const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 12;
+const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 16;
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
 const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 8;
 
@@ -36,6 +36,7 @@ impl Player {
         self.pos
     }
 
+    /// returns ``[min_cx, max_cx, min_cy, max_cy, min_cz, max_cz]``
     pub fn get_rendered_chunk_range(&self) -> [i32; 6] {
         let halfed_hrd = self
             .horizontal_render_distance
@@ -67,5 +68,36 @@ impl Player {
         return ((max_cx - min_cx) * (max_cy - min_cy) * (max_cz - min_cz))
             .to_u32()
             .unwrap_or(1);
+    }
+
+    /// returns ``([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz, chunk_number], chunk_number)``
+    pub fn get_rendered_chunk_data(&self) -> ([i32; 6], u32) {
+        let halfed_hrd = self
+            .horizontal_render_distance
+            .to_f32()
+            .unwrap()
+            .div_euclid(2.0);
+        let halfed_vrd = self
+            .vertical_render_distance
+            .to_f32()
+            .unwrap()
+            .div_euclid(2.0);
+
+        let cx = self.pos.x.div_euclid(CHUNK_SIZE as f32);
+        let cy = self.pos.y.div_euclid(CHUNK_SIZE as f32);
+        let cz = self.pos.z.div_euclid(CHUNK_SIZE as f32);
+
+        let min_cx = (cx - halfed_hrd).floor().to_i32().unwrap();
+        let max_cx = (cx + halfed_hrd).floor().to_i32().unwrap();
+        let min_cy = (cy - halfed_vrd).floor().to_i32().unwrap();
+        let max_cy = (cy + halfed_vrd).floor().to_i32().unwrap();
+        let min_cz = (cz - halfed_hrd).floor().to_i32().unwrap();
+        let max_cz = (cz + halfed_hrd).floor().to_i32().unwrap();
+
+        let chunk_number = ((max_cx - min_cx) * (max_cy - min_cy) * (max_cz - min_cz))
+            .to_u32()
+            .unwrap_or(1);
+
+        return ([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz], chunk_number);
     }
 }

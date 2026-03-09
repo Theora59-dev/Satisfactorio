@@ -1,12 +1,13 @@
+use crate::common::geometry::vertex::Vertex;
 use crate::engine::render::camera::{Camera, CameraUniform};
-use crate::engine::render::geometry::Vertex;
-use crate::engine::render::mesh::{ChunkMesh, WorldMesh};
+use crate::engine::render::mesh::world::WorldMesh;
+use crate::engine::render::render::{FrameData, RenderContext, Renderer, render_gizmo, render_world};
 use crate::game::player::camera::CameraController;
 use crate::game::player::player::Player;
-use crate::game::world::chunk::{CHUNK_SIZE, Chunk};
+use crate::game::state::game::GameState;
+use crate::game::world::chunk::Chunk;
 use crate::game::world::world::World;
 use cgmath::num_traits::ToPrimitive;
-use cgmath::{dot, InnerSpace, Vector3};
 use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
@@ -17,31 +18,13 @@ use winit::window::Window;
 // This will store the state of our game
 pub struct State {
     surface: wgpu::Surface<'static>,
+    pub window: Arc<Window>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
-    is_surface_configured: bool,
-    render_pipeline: wgpu::RenderPipeline,
-    gizmo_render_pipeline: wgpu::RenderPipeline,
-    gizmo_buffer: wgpu::Buffer,
-    pub window: Arc<Window>,
-    diffuse_bind_group: wgpu::BindGroup,
-    #[allow(unused)]
-    diffuse_texture: crate::engine::render::texture::Texture,
-    camera: Camera,
-    camera_uniform: CameraUniform,
-    camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
-    pub camera_controller: CameraController,
-    world: World,
-    player: Player,
-    world_mesh: WorldMesh,
-    num_vertex: u32,
-    dt: f32,
-    last_frame: Instant,
-    timer: f32,
-    frame_count: i32,
-    fps: i32
+    frame_data: FrameData,
+    pub game_state: GameState,
+    renderer: Renderer,
 }
 
 impl State {
@@ -162,7 +145,7 @@ impl State {
             cgmath::Vector3::unit_y(),
             config.width as f32 / config.height as f32,
             70.0,
-            0.0000000000001,
+            0.01,
             10000.0,
         );
 
@@ -198,8 +181,6 @@ impl State {
             }],
             label: Some("camera_bind_group"),
         });
-
-        let camera_controller = CameraController::new(16.0, 0.5);
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -301,48 +282,7 @@ impl State {
                 multiview_mask: None,
                 cache: None,
             });
-
-        let player = Player::new();
-
-        let mut world = World::new();
-        let world_start = Instant::now();
-
-        let [min_x, max_x, min_y, max_y, min_z, max_z] = player.get_rendered_chunk_range();
-
-        for x in min_x..=max_x {
-            for y in min_y..=max_y {
-                for z in min_z..=max_z {
-                    let chunk = Chunk::generate(x, y, z);
-                    world.set_chunk(x, y, z, chunk);
-                }
-            }
-        }
-
-        println!(
-            "Time to make the world: {:.3}ms.",
-            world_start.elapsed().as_micros().to_f64().unwrap() / 1_000.0
-        );
-
-        let start = Instant::now();
-
-        let mut world_mesh = WorldMesh::new();
-        world_mesh.update(&device, &world, &player);
-
-        println!(
-            "Time to make meshes: {:.3}ms.",
-            start.elapsed().as_micros().to_f64().unwrap() / 1_000.0
-        );
-
-        // let flat_vertices: Vec<Vertex> = vertices
-        //     .meshes
-        //     .iter()
-        //     .flat_map(|chunk| chunk.1.vertices.clone())
-        //     .c            // let cam_forward = Vector3::new(
-        //     self.camera.target.x - self.camera.eye.x,
-        //     self.camera.target.y - self.camera.eye.y,
-        //     self.camera.target.z - self.camera.eye.z,
-        // );ollect::<Vec<Vertex>>();
-
+            
         let gizmo = [
             Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
             Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
@@ -375,32 +315,53 @@ impl State {
             .expect("Capture souris");
         window.set_cursor_visible(false);
 
+        let player = Player::new();
+        let camera_controller = CameraController::new(16.0, 0.5);
+        let world = World::new();
+        let world_mesh = WorldMesh::new();
+
+        let frame_data = FrameData::new(
+            0.0,
+            0,
+            0.0,
+            Instant::now(),
+            0,
+        );
+
+        let mut game_state = GameState::new(
+            world,
+            world_mesh,
+            camera,
+            camera_controller,
+            player,
+        );
+
+        let renderer = Renderer::new(
+            false,
+
+            render_pipeline,
+            diffuse_bind_group,
+            diffuse_texture,
+            
+            camera_uniform,
+            camera_buffer,
+            camera_bind_group,
+            
+            gizmo_render_pipeline,
+            gizmo_buffer
+        );
+        
+        game_state.init(&device);
+
         Ok(Self {
             surface,
             device,
             queue,
             config,
-            is_surface_configured: false,
-            render_pipeline,
             window,
-            diffuse_bind_group,
-            diffuse_texture,
-            camera,
-            camera_uniform,
-            camera_buffer,
-            camera_bind_group,
-            camera_controller,
-            world,
-            player,
-            num_vertex: (vec![] as Vec<Vertex>).len() as u32,
-            gizmo_buffer,
-            gizmo_render_pipeline,
-            world_mesh,
-            dt: 0.0,
-            fps: 0,
-            last_frame: Instant::now(),
-            frame_count: 0,
-            timer: 0.0
+            frame_data,
+            game_state,
+            renderer,
         })
     }
 
@@ -409,78 +370,41 @@ impl State {
             self.config.width = width;
             self.config.height = height;
             self.surface.configure(&self.device, &self.config);
-            self.is_surface_configured = true;
+            self.renderer.is_surface_configured = true;
         }
     }
 
     pub fn update(&mut self) {
         let now = Instant::now();
-        let delta = now - self.last_frame;
-        self.last_frame = now;
-        self.dt = delta.as_secs_f32();
+        let dt = now - self.frame_data.last_frame;
 
-        self.frame_count += 1;
-        self.timer += delta.as_secs_f32();
+        self.frame_data.last_frame = now;
+        self.frame_data.dt = dt.as_secs_f32();
 
-        if self.timer >= 1.0 {
-            self.fps = self.frame_count;
-            self.frame_count = 0;
-            self.timer = 0.0;
+        self.frame_data.frame_count += 1;
+        self.frame_data.fps_timer += dt.as_secs_f32();
+
+        if self.frame_data.fps_timer >= 1.0 {
+            self.frame_data.fps = self.frame_data.frame_count;
+            self.frame_data.frame_count = 0;
+            self.frame_data.fps_timer = self.frame_data.fps_timer - 1.0;
 
             println!(
                 "FPS: {} dt: {}s\n>>> INFO: Position joueur: x={:.2}, y={:.2}, z={:.2} | position caméra: x={:.2}, y={:.2}, z={:.2}",
-                self.fps, self.dt,
-                self.player.pos.x, self.player.pos.y, self.player.pos.z,
-                self.camera.eye.x, self.camera.eye.y, self.camera.eye.z
+                self.frame_data.fps, self.frame_data.dt,
+                self.game_state.player.pos.x, self.game_state.player.pos.y, self.game_state.player.pos.z,
+                self.game_state.camera.eye.x, self.game_state.camera.eye.y, self.game_state.camera.eye.z
             );
         }
-
-        let forward = self.camera.forward();
-        let right = self.camera.right();
-        let up = cgmath::Vector3::unit_y();
-        let mut direction = Vector3::new(0.0, 0.0, 0.0);
-
-        if self.camera_controller.is_forward_pressed {
-            direction += forward;
-        }
-        if self.camera_controller.is_backward_pressed {
-            direction -= forward
-        }
-        if self.camera_controller.is_right_pressed {
-            direction += right;
-        }
-        if self.camera_controller.is_left_pressed {
-            direction -= right;
-        }
-        if self.camera_controller.is_up_pressed {
-            direction += up;
-        }
-        if self.camera_controller.is_down_pressed {
-            direction -= up;
-        }
-
-        if direction.magnitude2() > 0.0 {
-            self.player.vel = direction.normalize() * self.camera_controller.speed * self.dt;
-        }
-        else {
-            self.player.vel = Vector3::new(0.0, 0.0, 0.0);
-        }
-
-        self.player.update();
-        self.camera_controller.update_camera(self.dt, &mut self.camera, &self.player);
-        self.camera_uniform.update_view_proj(&self.camera);
-        self.queue.write_buffer(
-            &self.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[self.camera_uniform]),
-        );
+        
+        self.game_state.update(&self.queue, &mut self.renderer, self.frame_data.dt);
     }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
         self.window.request_redraw();
 
         // We can't render unless the surface is configured
-        if !self.is_surface_configured {
+        if !self.renderer.is_surface_configured {
             return Ok(());
         }
 
@@ -519,59 +443,14 @@ impl State {
                 multiview_mask: None,
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+            let render_context = RenderContext::new(
+                &self.frame_data,
+                &self.game_state,
+                &self.renderer
+            );
 
-            let mut front_chunks: Vec<&ChunkMesh> = vec![];
-
-            let cam_forward = self.camera.forward();
-            let cam_eye = Vector3::new(self.camera.eye.x, self.camera.eye.y, self.camera.eye.z);
-
-            for chunk_mesh in &self.world_mesh.meshes {
-                let min = Vector3::new(
-                    (chunk_mesh.0 .0) as f32 * CHUNK_SIZE as f32,
-                    (chunk_mesh.0 .1) as f32 * CHUNK_SIZE as f32,
-                    (chunk_mesh.0 .2) as f32 * CHUNK_SIZE as f32,
-                );
-                let max =
-                    min + Vector3::new(CHUNK_SIZE as f32, CHUNK_SIZE as f32, CHUNK_SIZE as f32);
-
-                let center = min + (max - min) * 0.5;
-
-                let extent = (max - min) * 0.5;
-
-                let radius = extent.x * cam_forward.x.abs()
-                    + extent.y * cam_forward.y.abs()
-                    + extent.z * cam_forward.z.abs();
-
-                let distance = dot(cam_forward, center - cam_eye);
-
-                // Check if the distance between chunk's "cube" and camera is negative, aka the cube is behind the camera. If so, do not render the chunk.
-                if distance + radius < 0.0 {
-                    continue;
-                }
-                front_chunks.push(chunk_mesh.1.as_ref());
-            }
-
-            // let mut visible_chunks: Vec<&ChunkMesh> = vec![];
-
-            for chunk_mesh in front_chunks {
-                let Some(chunk_vertex_buffer) = chunk_mesh.vertex_buffer.as_ref() else {
-                    println!("VERTEX BUFFER NOT SET FOR CHUNK");
-                    continue;
-                };
-                render_pass.set_vertex_buffer(0, chunk_vertex_buffer.slice(..));
-                // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
-                render_pass.draw(0..chunk_mesh.vertices_count, 0..1);
-            }
-
-            // render_pass.draw(0..self.num_vertex, 0..1);
-            // render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // 2.
-
-            render_pass.set_pipeline(&self.gizmo_render_pipeline);
-            render_pass.set_vertex_buffer(0, self.gizmo_buffer.slice(..));
-            render_pass.draw(0..6, 0..1);
+            render_world(&mut render_pass, &render_context);
+            render_gizmo(&mut render_pass, &render_context);
         }
 
         // submit will accept anything that implements IntoIter
@@ -584,8 +463,9 @@ impl State {
     pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         if code == KeyCode::Escape && is_pressed {
             event_loop.exit();
-        } else {
-            self.camera_controller.handle_key(code, is_pressed);
+        }
+        else {
+            self.game_state.camera_controller.handle_key(code, is_pressed);
         }
     }
 }

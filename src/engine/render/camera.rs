@@ -4,7 +4,7 @@ use winit::keyboard::KeyCode;
 use crate::game::player::player::Player;
 
 #[rustfmt::skip]
-const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
+pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
     cgmath::Vector4::new(1.0, 0.0, 0.0, 0.0),
     cgmath::Vector4::new(0.0, 1.0, 0.0, 0.0),
     cgmath::Vector4::new(0.0, 0.0, 0.5, 0.0),
@@ -17,11 +17,11 @@ pub struct Camera {
     pub target: cgmath::Point3<f32>,
     pub yaw: f32,
     pub pitch: f32,
-    up: cgmath::Vector3<f32>,
-    aspect: f32,
-    fovy: f32,
-    znear: f32,
-    zfar: f32,
+    pub up: cgmath::Vector3<f32>,
+    pub aspect: f32,
+    pub fovy: f32,
+    pub znear: f32,
+    pub zfar: f32,
 }
 
 impl Camera {
@@ -72,7 +72,8 @@ impl Camera {
     fn build_view_projection_matrix(&self) -> Matrix4<f32> {
         let view = Matrix4::look_at_rh(self.eye, self.target(), Vector3::unit_y());
         let proj = cgmath::perspective(Deg(self.fovy), self.aspect, self.znear, self.zfar);
-        OPENGL_TO_WGPU_MATRIX * proj * view
+        // OPENGL_TO_WGPU_MATRIX * proj * view
+        proj * view
     }
 
     pub fn set_position(&mut self, position: cgmath::Point3<f32>) {
@@ -104,5 +105,9 @@ impl CameraUniform {
 
     pub fn update_view_proj(&mut self, camera: &Camera) {
         self.view_proj = camera.build_view_projection_matrix().into();
+    }
+
+    pub fn get_view_proj(&self) -> Matrix4<f32> {
+        self.view_proj.into()
     }
 }

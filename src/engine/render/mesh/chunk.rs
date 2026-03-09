@@ -1,21 +1,12 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{collections::HashMap, sync::Arc};
 
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use wgpu::{util::DeviceExt, Buffer, Device};
+use wgpu::{Device, util::DeviceExt};
 
-use crate::engine::render::geometry::Vertex;
-use crate::engine::render::geometry::{Direction, FaceMask};
-use crate::game::player::player::Player;
-use crate::game::world::block::BlockInstance;
-use crate::game::world::chunk::{CHUNK_SIZE, Chunk};
-use crate::game::world::padded_chunk::PaddedChunk;
-use crate::game::world::world::World;
+use crate::{common::geometry::{direction::Direction, vertex::Vertex}, engine::render::{buffer::BufferData, mesh::face_mask::FaceMask}, game::world::{block::BlockInstance, chunk::{CHUNK_SIZE, Chunk}, padded_chunk::PaddedChunk, world::World}};
 
 pub struct ChunkMesh {
     pub vertices: Vec<Vertex>,
-    pub vertex_buffer: Option<Buffer>,
-    pub vertices_count: u32,
+    pub buffer: BufferData,
     dirty: AtomicBool,
 }
 
@@ -23,8 +14,7 @@ impl ChunkMesh {
     pub fn new() -> ChunkMesh {
         return ChunkMesh {
             vertices: vec![],
-            vertex_buffer: None,
-            vertices_count: 0,
+            buffer: BufferData::empty(),
             dirty: AtomicBool::new(true),
         };
     }
@@ -347,7 +337,7 @@ impl ChunkMesh {
             }
         }
 
-        let vertex_count = vertices.len() as u32;
+        let vertex_number = vertices.len() as u32;
         let vertex_buffer = (*device).create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("chunk vertex buffer"),
             contents: bytemuck::cast_slice(&vertices),
@@ -355,42 +345,12 @@ impl ChunkMesh {
         });
 
         self.vertices = vertices;
-        self.vertex_buffer = Some(vertex_buffer);
-        self.vertices_count = vertex_count;
-        self.dirty = AtomicBool::new(false);
-    }
-}
-
-pub struct WorldMesh {
-    pub meshes: HashMap<(i32, i32, i32), Arc<ChunkMesh>>,
-}
-
-impl WorldMesh {
-    pub fn new() -> WorldMesh {
-        return WorldMesh {
-            meshes: HashMap::new(),
+        self.buffer = BufferData {
+            vertex_buffer: Some(vertex_buffer),
+            vertex_number: Some(vertex_number),
+            index_buffer: None,
+            index_number: None,
         };
-    }
-
-    /// Builds simultaneously every single chunk within the player's both horizontal and vertical render distance only if it needs it (if dirty == true).
-    pub fn update(&mut self, device: &Device, world: &World, player: &Player) {
-        self.meshes = world
-            .get_player_rendered_chunks(player)
-            .into_par_iter()
-            .map(|chunk| {
-                let key = (chunk.x, chunk.y, chunk.z);
-
-                if let Some(existing) = self.meshes.get(&key) {
-                    if existing.is_dirty() {
-                        return (key, Arc::clone(existing));
-                    }
-                }
-
-                let mut mesh = ChunkMesh::new();
-                mesh.make_greedy(chunk, world, device, key.0, key.1, key.2);
-                // let mesh = ChunkMesh::make(chunk, world, cx, cy, cz);
-                return (key, Arc::new(mesh));
-            })
-            .collect();
+        self.dirty = AtomicBool::new(false);
     }
 }

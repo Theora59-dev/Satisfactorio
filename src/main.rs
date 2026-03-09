@@ -1,4 +1,5 @@
 mod engine;
+mod common;
 mod game;
 
 use engine::core::application::run;

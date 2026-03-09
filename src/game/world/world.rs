@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{engine::render::mesh::WorldMesh, game::{player::player::Player, world::{block::BlockInstance, chunk::{CHUNK_SIZE, Chunk}}}};
+use crate::{engine::render::mesh::world::WorldMesh, game::{player::player::Player, world::{block::BlockInstance, chunk::{CHUNK_SIZE, Chunk}}}};
 
 pub struct World {
     chunks: HashMap<(i32, i32, i32), Chunk>,
@@ -24,8 +24,7 @@ impl World {
     }
 
     pub fn update(&mut self, player: &Player, world_mesh: &mut WorldMesh) {
-        let [min_cx, max_cx, min_cy, max_cy, min_cz, max_cz] = player.get_rendered_chunk_range();
-        let chunk_number = player.get_rendered_chunk_number();
+        let ([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz], chunk_number) = player.get_rendered_chunk_data();
 
         let mut chunks: Vec<&Chunk> = Vec::new();
         chunks.reserve_exact(chunk_number as usize);
@@ -48,8 +47,7 @@ impl World {
     }
 
     pub fn get_player_rendered_chunks(&self, player: &Player) -> Vec<&Chunk> {
-        let [min_cx, max_cx, min_cy, max_cy, min_cz, max_cz] = player.get_rendered_chunk_range();
-        let chunk_number = player.get_rendered_chunk_number();
+        let ([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz], chunk_number) = player.get_rendered_chunk_data();
 
         let mut chunks: Vec<&Chunk> = Vec::new();
         chunks.reserve_exact(chunk_number as usize);

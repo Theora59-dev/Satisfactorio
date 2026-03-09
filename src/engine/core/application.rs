@@ -97,7 +97,7 @@ impl ApplicationHandler<State> for App {
         };
 
         if let DeviceEvent::MouseMotion { delta } = event {
-            state.camera_controller.process_mouse(delta.0, delta.1);
+            state.game_state.camera_controller.process_mouse(delta.0, delta.1);
         }
     }
 

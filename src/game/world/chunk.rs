@@ -1,4 +1,4 @@
-use crate::{engine::render::mesh::WorldMesh, game::world::{block::BlockInstance, world::World}};
+use crate::{engine::render::mesh::world::WorldMesh, game::world::{block::BlockInstance, world::World}};
 
 pub const CHUNK_SIZE: i32 = 32;
 pub const CHUNK_SIZE_SQR: i32 = CHUNK_SIZE * CHUNK_SIZE;
@@ -52,9 +52,5 @@ impl Chunk {
     #[inline(always)]
     pub fn set_block_from_i(&mut self, i: usize, block: BlockInstance) {
         self.blocks[i] = block;
-    }
-
-    pub fn update(&mut self, world: &mut World, world_mesh: &mut WorldMesh) {
-
     }
 }
