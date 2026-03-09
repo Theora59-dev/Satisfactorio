@@ -1,4 +1,4 @@
-use crate::world::CHUNK_SIZE;
+use crate::game::world::chunk::CHUNK_SIZE;
 use cgmath::num_traits::ToPrimitive;
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)

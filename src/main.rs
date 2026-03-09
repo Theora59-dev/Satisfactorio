@@ -1,9 +1,7 @@
 mod engine;
-mod world;
-mod player;
+mod game;
 
 use engine::core::application::run;
-
 fn main() {
     println!("Hello, world!");
     let _ = run();

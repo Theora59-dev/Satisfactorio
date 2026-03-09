@@ -169,6 +169,7 @@ pub struct RenderFaceTexto {
 }
 
 impl RenderFaceTexto {
+    #[inline(always)]
     pub fn new(x: u8, y: u8, z: u8, w: u8, h: u8, direction: Direction, texture: u16) -> RenderFaceTexto {
         let mut texto = RenderFaceTexto {
             geometry: 0,
@@ -183,10 +184,12 @@ impl RenderFaceTexto {
         return texto;
     }
 
+    #[inline(always)]
     pub fn get_direction(&self) -> Direction {
         return Direction::from_bits_unchecked((self.geometry & 0x7) as u8);
     }
 
+    #[inline(always)]
     pub fn get_quad_dimensions(&self) -> [u8; 2] {
         return [
             ((self.geometry & 0xF8) >> 3) as u8,
@@ -194,6 +197,7 @@ impl RenderFaceTexto {
         ];
     }
 
+    #[inline(always)]
     pub fn get_top_left_vertex(&self) -> [u8; 3] {
         return [
             ((self.geometry & 0x0F80_0000) >> 23) as u8,
@@ -202,14 +206,17 @@ impl RenderFaceTexto {
         ];
     }
 
+    #[inline(always)]
     pub fn get_texture(&self) -> u16 {
         return (self.material & 0xFFFF) as u16;
     }
 
+    #[inline(always)]
     pub fn set_direction(&mut self, direction: Direction) {
         self.geometry = (self.geometry & !0x7) | direction as u32;
     }
 
+    #[inline(always)]
     pub fn set_quad_dimensions(&mut self, w: u8, h: u8) {
         self.geometry = (self.geometry & !0x1FF8) | (
             (w as u32) << 8 |
@@ -217,6 +224,7 @@ impl RenderFaceTexto {
         );
     }
 
+    #[inline(always)]
     pub fn set_top_left_vertex(&mut self, x: u8, y: u8, z: u8) {
         self.geometry = (self.geometry & !0x0FFF_E000) | (
             (x as u32) << 23 |
@@ -225,6 +233,7 @@ impl RenderFaceTexto {
         );
     }
 
+    #[inline(always)]
     pub fn set_texture(&mut self, texture: u16) {
         self.material = (self.material & !0xFFFF) | (texture as u32);
     }

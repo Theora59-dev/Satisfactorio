@@ -1,12 +1,14 @@
-use crate::engine::render::camera::{Camera, CameraController, CameraUniform};
+use crate::engine::render::camera::{Camera, CameraUniform};
 use crate::engine::render::geometry::Vertex;
 use crate::engine::render::mesh::{ChunkMesh, WorldMesh};
-use crate::player::Player;
-use crate::world::{Chunk, World, CHUNK_SIZE};
+use crate::game::player::camera::CameraController;
+use crate::game::player::player::Player;
+use crate::game::world::chunk::{CHUNK_SIZE, Chunk};
+use crate::game::world::world::World;
 use cgmath::num_traits::ToPrimitive;
 use cgmath::{dot, InnerSpace, Vector3};
 use std::sync::Arc;
-use std::time::{self, Instant};
+use std::time::Instant;
 use wgpu::util::DeviceExt;
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::KeyCode;
@@ -323,7 +325,8 @@ impl State {
 
         let start = Instant::now();
 
-        let world_mesh = WorldMesh::update(&device, &world, &player, &WorldMesh::new());
+        let mut world_mesh = WorldMesh::new();
+        world_mesh.update(&device, &world, &player);
 
         println!(
             "Time to make meshes: {:.3}ms.",
@@ -554,7 +557,11 @@ impl State {
             // let mut visible_chunks: Vec<&ChunkMesh> = vec![];
 
             for chunk_mesh in front_chunks {
-                render_pass.set_vertex_buffer(0, chunk_mesh.vertex_buffer.slice(..));
+                let Some(chunk_vertex_buffer) = chunk_mesh.vertex_buffer.as_ref() else {
+                    println!("VERTEX BUFFER NOT SET FOR CHUNK");
+                    continue;
+                };
+                render_pass.set_vertex_buffer(0, chunk_vertex_buffer.slice(..));
                 // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
                 render_pass.draw(0..chunk_mesh.vertices_count, 0..1);
             }

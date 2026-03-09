@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{collections::HashMap, sync::Arc};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -5,27 +6,46 @@ use wgpu::{util::DeviceExt, Buffer, Device};
 
 use crate::engine::render::geometry::Vertex;
 use crate::engine::render::geometry::{Direction, FaceMask};
-use crate::{
-    player::Player,
-    world::{BlockInstance, Chunk, PaddedChunk, World, CHUNK_SIZE},
-};
+use crate::game::player::player::Player;
+use crate::game::world::block::BlockInstance;
+use crate::game::world::chunk::{CHUNK_SIZE, Chunk};
+use crate::game::world::padded_chunk::PaddedChunk;
+use crate::game::world::world::World;
 
 pub struct ChunkMesh {
     pub vertices: Vec<Vertex>,
-    pub vertex_buffer: Buffer,
+    pub vertex_buffer: Option<Buffer>,
     pub vertices_count: u32,
-    dirty: bool,
+    dirty: AtomicBool,
 }
 
 impl ChunkMesh {
+    pub fn new() -> ChunkMesh {
+        return ChunkMesh {
+            vertices: vec![],
+            vertex_buffer: None,
+            vertices_count: 0,
+            dirty: AtomicBool::new(true),
+        };
+    }
+
+    pub fn set_dirty(&self) {
+        self.dirty.store(true, Ordering::Relaxed);
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        return self.dirty.load(Ordering::Relaxed);
+    }
+
     pub fn make_greedy(
+        &mut self,
         chunk: &Chunk,
         world: &World,
         device: &Device,
         cx: i32,
         cy: i32,
         cz: i32,
-    ) -> ChunkMesh {
+    ) {
         let mut vertices: Vec<Vertex> = vec![];
 
         let offset_x = cx * CHUNK_SIZE;
@@ -334,12 +354,10 @@ impl ChunkMesh {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        return ChunkMesh {
-            vertices: vertices,
-            vertex_buffer: vertex_buffer,
-            vertices_count: vertex_count,
-            dirty: false,
-        };
+        self.vertices = vertices;
+        self.vertex_buffer = Some(vertex_buffer);
+        self.vertices_count = vertex_count;
+        self.dirty = AtomicBool::new(false);
     }
 }
 
@@ -355,25 +373,24 @@ impl WorldMesh {
     }
 
     /// Builds simultaneously every single chunk within the player's both horizontal and vertical render distance only if it needs it (if dirty == true).
-    pub fn update(device: &Device, world: &World, player: &Player, old: &WorldMesh) -> WorldMesh {
-        let meshes: HashMap<_, _> = world
+    pub fn update(&mut self, device: &Device, world: &World, player: &Player) {
+        self.meshes = world
             .get_player_rendered_chunks(player)
             .into_par_iter()
-            .map(|(chunk, cx, cy, cz)| {
-                let key = (cx, cy, cz);
+            .map(|chunk| {
+                let key = (chunk.x, chunk.y, chunk.z);
 
-                if let Some(existing) = old.meshes.get(&key) {
-                    if !existing.dirty {
+                if let Some(existing) = self.meshes.get(&key) {
+                    if existing.is_dirty() {
                         return (key, Arc::clone(existing));
                     }
                 }
 
-                let mesh = ChunkMesh::make_greedy(chunk, world, device, cx, cy, cz);
+                let mut mesh = ChunkMesh::new();
+                mesh.make_greedy(chunk, world, device, key.0, key.1, key.2);
                 // let mesh = ChunkMesh::make(chunk, world, cx, cy, cz);
                 return (key, Arc::new(mesh));
             })
             .collect();
-
-        return WorldMesh { meshes };
     }
 }

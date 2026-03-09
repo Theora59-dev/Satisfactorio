@@ -1,0 +1,60 @@
+use crate::{engine::render::mesh::WorldMesh, game::world::{block::BlockInstance, world::World}};
+
+pub const CHUNK_SIZE: i32 = 32;
+pub const CHUNK_SIZE_SQR: i32 = CHUNK_SIZE * CHUNK_SIZE;
+pub const CHUNK_BLOCK_NUMBER: usize = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) as usize;
+pub const LAST_CHUNK_AXIS_INDEX: i32 = CHUNK_SIZE - 1;
+
+pub struct Chunk {
+    blocks: [BlockInstance; CHUNK_BLOCK_NUMBER],
+    pub x: i32,
+    pub y: i32,
+    pub z: i32
+}
+
+impl Chunk {
+    pub fn generate(cx: i32, cy: i32, cz: i32) -> Chunk {
+        let mut chunk = Chunk { blocks: [BlockInstance::air(); CHUNK_BLOCK_NUMBER], x: cx, y: cy, z: cz };
+        let block = BlockInstance::new(1);
+
+        // On génère pour l'instant un flat sur la couche y: 0 avec un id bidon pour qu'on ne le mélange pas à l'air et qu'on crée des blocs solides et visibles
+        // Pour l'instant on s'en fout des cos du chunk, ça servira plus tard pour des trucs style biomes, température, etc
+
+        for x in 0..CHUNK_SIZE {
+            for z in 0..CHUNK_SIZE {
+                // Todo: génération aléatoire
+                chunk.set_block_from_xyz(x, 0, z, block.clone());
+            }
+        }
+        
+        return chunk;
+    }
+
+    /// Abstraction of `get_block_from_i` but with components.
+    /// 
+    /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time. 
+    pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
+        return self.get_block_from_i((x + y * CHUNK_SIZE + z * CHUNK_SIZE_SQR) as usize);
+    }
+
+    pub fn get_block_from_i(&self, i: usize) -> BlockInstance {
+        return self.blocks[i];
+    }
+
+    /// Abstraction of `set_block_from_i` but with components.
+    /// 
+    /// Prefer using `set_block_from_i` whenever possible, as it saves computing power and time. 
+    #[inline(always)]
+    pub fn set_block_from_xyz(&mut self, x: i32, y: i32, z: i32, block: BlockInstance) {
+        self.set_block_from_i((x + y * CHUNK_SIZE + z * CHUNK_SIZE_SQR) as usize, block);
+    }
+
+    #[inline(always)]
+    pub fn set_block_from_i(&mut self, i: usize, block: BlockInstance) {
+        self.blocks[i] = block;
+    }
+
+    pub fn update(&mut self, world: &mut World, world_mesh: &mut WorldMesh) {
+
+    }
+}
