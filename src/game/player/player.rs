@@ -1,5 +1,6 @@
-use crate::game::world::chunk::CHUNK_SIZE;
-use cgmath::num_traits::ToPrimitive;
+use crate::{engine::render::camera::{Camera, CameraUniform}, game::{player::camera::CameraController, world::chunk::CHUNK_SIZE}};
+use cgmath::{InnerSpace, Vector3, num_traits::ToPrimitive};
+use wgpu::{Buffer, Queue};
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
 const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 16;
@@ -28,8 +29,48 @@ impl Player {
         self.vertical_render_distance = vertical;
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, dt: f32, camera: &mut Camera, camera_controller: &mut CameraController, camera_uniform: &mut CameraUniform, camera_buffer: &Buffer, queue: &Queue) {
+        let forward = camera.forward();
+        let right = camera.right();
+        let up = cgmath::Vector3::unit_y();
+        let mut direction = Vector3::new(0.0, 0.0, 0.0);
+
+        if camera_controller.is_forward_pressed {
+            direction += forward;
+        }
+        if camera_controller.is_backward_pressed {
+            direction -= forward
+        }
+        if camera_controller.is_right_pressed {
+            direction += right;
+        }
+        if camera_controller.is_left_pressed {
+            direction -= right;
+        }
+        if camera_controller.is_up_pressed {
+            direction += up;
+        }
+        if camera_controller.is_down_pressed {
+            direction -= up;
+        }
+
+        if direction.magnitude2() > 0.0 {
+            self.vel = direction.normalize() * (camera_controller.speed * dt);
+        }
+        else {
+            self.vel = Vector3::new(0.0, 0.0, 0.0);
+        }
+
         self.pos += self.vel;
+
+        camera_controller.update_camera(dt, camera, &self);
+        camera_uniform.update_view_proj(&camera);
+        
+        queue.write_buffer(
+            &camera_buffer,
+            0,
+            bytemuck::cast_slice(&[*camera_uniform]),
+        );
     }
 
     pub fn get_pos(&self) -> cgmath::Point3<f32> {
