@@ -19,7 +19,7 @@ use crate::{
 
 pub struct ChunkMesh {
     pub vertices: Vec<Vertex>,
-    pub buffer: BufferData,
+    pub vertex_count: u32,
     dirty: AtomicBool,
 }
 
@@ -27,7 +27,7 @@ impl ChunkMesh {
     pub fn new() -> ChunkMesh {
         return ChunkMesh {
             vertices: vec![],
-            buffer: BufferData::empty(),
+            vertex_count: 0,
             dirty: AtomicBool::new(true),
         };
     }
@@ -366,20 +366,8 @@ impl ChunkMesh {
             }
         }
 
-        let vertex_number = vertices.len() as u32;
-        let vertex_buffer = (*device).create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("chunk vertex buffer"),
-            contents: bytemuck::cast_slice(&vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
         self.vertices = vertices;
-        self.buffer = BufferData {
-            vertex_buffer: Some(vertex_buffer),
-            vertex_number: Some(vertex_number),
-            index_buffer: None,
-            index_number: None,
-        };
+        self.vertex_count = 0;
         self.dirty = AtomicBool::new(false);
     }
 }

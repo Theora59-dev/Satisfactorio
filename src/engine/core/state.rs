@@ -17,13 +17,13 @@ use winit::window::Window;
 
 // This will store the state of our game
 pub struct State {
-    surface: wgpu::Surface<'static>,
     pub window: Arc<Window>,
+    surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     frame_data: FrameData,
-    pub game_state: GameState,
+    // pub game_state: GameState,
     renderer: Renderer,
     text_renderer: TextRenderer,
 }
@@ -452,64 +452,66 @@ impl State {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.window.request_redraw();
+        // self.window.request_redraw();
 
         // We can't render unless the surface is configured
-        if !self.renderer.is_surface_configured {
-            return Ok(());
-        }
+        // if !self.renderer.is_surface_configured {
+        //     return Ok(());
+        // }
 
-        let output = self.surface.get_current_texture()?;
+        // let output = self.surface.get_current_texture()?;
 
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        // let view = output
+        //     .texture
+        //     .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
+        // let mut encoder = self
+        //     .device
+        //     .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        //         label: Some("Render Encoder"),
+        //     });
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    depth_slice: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.9,
-                            g: 0.9,
-                            b: 0.9,
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-                multiview_mask: None,
-            });
+        // {
+        //     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        //         label: Some("Render Pass"),
+        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+        //             view: &view,
+        //             resolve_target: None,
+        //             depth_slice: None,
+        //             ops: wgpu::Operations {
+        //                 load: wgpu::LoadOp::Clear(wgpu::Color {
+        //                     r: 0.9,
+        //                     g: 0.9,
+        //                     b: 0.9,
+        //                     a: 1.0,
+        //                 }),
+        //                 store: wgpu::StoreOp::Store,
+        //             },
+        //         })],
+        //         depth_stencil_attachment: None,
+        //         occlusion_query_set: None,
+        //         timestamp_writes: None,
+        //         multiview_mask: None,
+        //     });
 
-            let render_context = RenderContext::new(
-                &self.frame_data,
-                &self.game_state,
-                &self.renderer
-            );
+        //     let render_context = RenderContext::new(
+        //         &self.frame_data,
+        //         &self.game_state,
+        //         &self.renderer
+        //     );
 
-            render_world(&mut render_pass, &render_context);
-            render_gizmo(&mut render_pass, &render_context);
+        //     render_world(&mut render_pass, &render_context);
+        //     render_gizmo(&mut render_pass, &render_context);
             
-            self.text_renderer.prepare(&self.device, &self.queue);
-            self.text_renderer.render(&self.device, &self.queue, &mut render_pass);
-        }
+        //     self.text_renderer.prepare(&self.device, &self.queue);
+        //     self.text_renderer.render(&self.device, &self.queue, &mut render_pass);
+        // }
 
-        // submit will accept anything that implements IntoIter
-        self.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
+        // // submit will accept anything that implements IntoIter
+        // self.queue.submit(std::iter::once(encoder.finish()));
+        // output.present();
+
+        self.renderer.render(&self.surface, &self.device, &self.queue);
 
         Ok(())
     }

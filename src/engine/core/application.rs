@@ -13,12 +13,14 @@ pub enum AppEvent {
 
 pub struct App {
     state: Option<State>,
+    update: fn(&mut State),
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(update: fn(&mut State)) -> Self {
         Self {
             state: None,
+            update
         }
     }
 }
@@ -56,6 +58,7 @@ impl ApplicationHandler<AppEvent> for App {
         };
 
         state.update();
+        (self.update)(state);
         state.window.request_redraw();
     }
 

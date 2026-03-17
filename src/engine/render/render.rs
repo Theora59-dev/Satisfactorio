@@ -1,11 +1,11 @@
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
-use cgmath::{dot, EuclideanSpace, Matrix4, Vector3};
-use wgpu::{BindGroup, Buffer, RenderPass, RenderPipeline};
+use cgmath::{EuclideanSpace, Matrix4, Point3, Vector3, dot};
+use wgpu::{BindGroup, Buffer, Device, IndexFormat, Queue, RenderPass, RenderPipeline, Surface};
 
 use crate::{
     common::geometry::plane::Plane,
-    engine::render::{camera::CameraUniform, texture::Texture},
+    engine::render::{camera::{Camera, CameraUniform}, mesh::chunk::ChunkMesh, texture::Texture},
     game::{state::game::GameState, world::chunk::CHUNK_SIZE},
 };
 
@@ -33,12 +33,9 @@ pub struct Renderer {
     pub gizmo_buffer: Buffer,
 
     pub wireframe: bool,
-}
 
-pub(crate) struct RenderContext<'a> {
-    pub game_state: &'a GameState,
-    pub frame_data: &'a FrameData,
-    pub renderer: &'a Renderer,
+    pub chunks: HashMap<(i32, i32, i32), Mesh>,
+    pub camera: Camera,
 }
 
 impl FrameData {
@@ -51,6 +48,18 @@ impl FrameData {
             frame_count,
         }
     }
+}
+
+pub struct Mesh {
+    pub vertex_buffer: (bool, Buffer),
+    pub index_buffer: (bool, Option<Buffer>),
+    pub uniform_buffer: (bool, Option<Buffer>),
+
+    pub vertex_count: u32,
+    pub index_count: u32,
+    pub uniform_count: u32,
+
+    
 }
 
 impl Renderer {
@@ -84,21 +93,106 @@ impl Renderer {
             gizmo_render_pipeline,
             gizmo_buffer,
 
-            wireframe: false
+            wireframe: false,
+
+            chunks: HashMap::new(),
+            camera: Camera::new(
+                Point3::new(0.0, 0.0, 1.0),
+                Point3::new(0.0, 0.0, 0.0),
+                Vector3::unit_y(),
+                1.0,
+                70.0,
+                0.1,
+                1000.0
+            )
         }
     }
-}
 
-impl<'a> RenderContext<'a> {
-    pub fn new(
-        frame_data: &'a FrameData,
-        game_state: &'a GameState,
-        renderer: &'a Renderer,
-    ) -> Self {
-        Self {
-            game_state,
-            frame_data,
-            renderer,
+    pub fn render(&self, surface: &Surface, device: &Device, queue: &Queue) {
+        if !self.is_surface_configured {
+            return;
+        }
+
+        let output = surface.get_current_texture().unwrap();
+
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    depth_slice: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.9,
+                            g: 0.9,
+                            b: 0.9,
+                            a: 1.0,
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+                multiview_mask: None,
+            });
+
+            self.render_chunks(&mut render_pass);
+            
+        }
+
+        // submit will accept anything that implements IntoIter
+        queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+    }
+
+    pub fn render_chunks(&self, render_pass: &mut RenderPass) {
+        let cam_forward = self.camera.forward();
+        let cam_eye = self.camera.eye.to_vec();
+
+        for chunk in &self.chunks {
+            // Vertex as Vector3 in the world that is equal to the local origin of the current chunk
+            let min: Vector3<f32> = Vector3::new(
+                (chunk.0.0) as f32 * CHUNK_SIZE as f32,
+                (chunk.0.1) as f32 * CHUNK_SIZE as f32,
+                (chunk.0.2) as f32 * CHUNK_SIZE as f32,
+            );
+
+            // Vertex as Vector3 in the world that is equal to the absolute opposite of the local origin of the current chunk
+            let max = min + Vector3::new(
+                CHUNK_SIZE as f32,
+                CHUNK_SIZE as f32,
+                CHUNK_SIZE as f32
+            );
+
+            // Check if the chunk is behind the camera.
+            // This allows us to pre-filter chunks before going too further in the tests, at least for chunks that shouldn't be drawn to screen.
+            if is_chunk_behind_camera(&min, &max, &cam_forward, &cam_eye) {
+                continue;
+            }
+
+            // Check if the chunk is outside the camera's frustum, aka outside it's field of view.
+            // This operation is a little bit more expensive than the one above.
+            // This is why we do the later first : to eliminate chunks as much as possible before doing this final test.
+            if !is_chunk_in_camera_frustum(&min, &max, &frustum) {
+                continue;
+            }
+
+            let mesh = chunk.1;
+            if mesh.vertex_buffer.0 {
+                render_pass.set_vertex_buffer(0, mesh.vertex_buffer.1.slice(..));
+            }
+            render_pass.draw(0..mesh.vertex_count, 0..1);
         }
     }
 }
@@ -146,7 +240,7 @@ fn is_chunk_in_camera_frustum(min: &Vector3<f32>, max: &Vector3<f32>, planes: &[
     true
 }
 
-pub fn render_world(render_pass: &mut RenderPass, context: &RenderContext) {
+pub fn render_world(render_pass: &mut RenderPass) {
     if context.renderer.wireframe {
         render_pass.set_pipeline(&context.renderer.world_wireframe_render_pipeline);
     }
