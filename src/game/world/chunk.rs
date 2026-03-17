@@ -1,3 +1,7 @@
+use std::f32::consts::PI;
+
+use cgmath::num_traits::ToPrimitive;
+
 use crate::game::world::block::BlockInstance;
 
 pub const CHUNK_SIZE: i32 = 32;
@@ -23,7 +27,8 @@ impl Chunk {
         for x in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 // Todo: génération aléatoire
-                chunk.set_block_from_xyz(x, 0, z, block.clone());
+                let y = 0;
+                chunk.set_block_from_xyz(x, y, z, block.clone());
             }
         }
         

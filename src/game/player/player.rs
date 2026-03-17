@@ -3,9 +3,9 @@ use cgmath::{InnerSpace, Vector3, num_traits::ToPrimitive};
 use wgpu::{Buffer, Queue};
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
-const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 16;
+const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 7;
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
-const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 8;
+const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 1;
 
 pub struct Player {
     pub pos: cgmath::Point3<f32>,
@@ -63,7 +63,7 @@ impl Player {
 
         self.pos += self.vel;
 
-        camera_controller.update_camera(dt, camera, &self);
+        camera_controller.update_camera(camera, &self);
         camera_uniform.update_view_proj(&camera);
         
         queue.write_buffer(

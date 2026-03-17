@@ -20,6 +20,7 @@ pub struct FrameData {
 pub struct Renderer {
     pub is_surface_configured: bool,
 
+    pub world_wireframe_render_pipeline: RenderPipeline,
     pub world_render_pipeline: RenderPipeline,
     pub diffuse_bind_group: BindGroup,
     pub diffuse_texture: Texture,
@@ -30,6 +31,8 @@ pub struct Renderer {
 
     pub gizmo_render_pipeline: RenderPipeline,
     pub gizmo_buffer: Buffer,
+
+    pub wireframe: bool,
 }
 
 pub(crate) struct RenderContext<'a> {
@@ -54,6 +57,7 @@ impl Renderer {
     pub fn new(
         is_surface_configured: bool,
 
+        world_wireframe_render_pipeline: RenderPipeline,
         world_render_pipeline: RenderPipeline,
         diffuse_bind_group: BindGroup,
         diffuse_texture: Texture,
@@ -68,6 +72,7 @@ impl Renderer {
         Self {
             is_surface_configured,
 
+            world_wireframe_render_pipeline,
             world_render_pipeline,
             diffuse_bind_group,
             diffuse_texture,
@@ -78,6 +83,8 @@ impl Renderer {
 
             gizmo_render_pipeline,
             gizmo_buffer,
+
+            wireframe: false
         }
     }
 }
@@ -140,7 +147,13 @@ fn is_chunk_in_camera_frustum(min: &Vector3<f32>, max: &Vector3<f32>, planes: &[
 }
 
 pub fn render_world(render_pass: &mut RenderPass, context: &RenderContext) {
-    render_pass.set_pipeline(&context.renderer.world_render_pipeline);
+    if context.renderer.wireframe {
+        render_pass.set_pipeline(&context.renderer.world_wireframe_render_pipeline);
+    }
+    else {
+        render_pass.set_pipeline(&context.renderer.world_render_pipeline);
+    }
+    
     render_pass.set_bind_group(0, &context.renderer.diffuse_bind_group, &[]);
     render_pass.set_bind_group(1, &context.renderer.camera_bind_group, &[]);
 

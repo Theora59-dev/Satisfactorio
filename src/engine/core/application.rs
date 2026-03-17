@@ -1,88 +1,38 @@
 use std::sync::Arc;
 
-use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::event_loop::ActiveEventLoop;
 use winit::{application::ApplicationHandler, keyboard::PhysicalKey};
 
 use crate::engine::core::state::State;
 use winit::event::{DeviceEvent, DeviceId, KeyEvent, WindowEvent};
-use winit::window::Window;
+use winit::window::{CursorGrabMode, Window};
 
-struct App {
-    #[cfg(target_arch = "wasm32")]
-    proxy: Option<winit::event_loop::EventLoopProxy<State>>,
+pub enum AppEvent {
+
+}
+
+pub struct App {
     state: Option<State>,
 }
 
 impl App {
-    fn new(#[cfg(target_arch = "wasm32")] event_loop: &EventLoop<State>) -> Self {
-        #[cfg(target_arch = "wasm32")]
-        let proxy = Some(event_loop.create_proxy());
+    pub fn new() -> Self {
         Self {
             state: None,
-            #[cfg(target_arch = "wasm32")]
-            proxy,
         }
     }
 }
 
-impl ApplicationHandler<State> for App {
+impl ApplicationHandler<AppEvent> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        #[allow(unused_mut)]
-        let mut window_attributes = Window::default_attributes();
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            use wasm_bindgen::JsCast;
-            use winit::platform::web::WindowAttributesExtWebSys;
-
-            const CANVAS_ID: &str = "canvas";
-
-            let window = wgpu::web_sys::window().unwrap_throw();
-            let document = window.document().unwrap_throw();
-            let canvas = document.get_element_by_id(CANVAS_ID).unwrap_throw();
-            let html_canvas_element = canvas.unchecked_into();
-            window_attributes = window_attributes.with_canvas(Some(html_canvas_element));
-        }
-
+        println!("resumed");
+        let window_attributes = Window::default_attributes();
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            // If we are not on web we can use pollster to
-            // await the
-            self.state = Some(pollster::block_on(State::new(window)).unwrap());
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            // Run the future asynchronously and use the
-            // proxy to send the results to the event loop
-            if let Some(proxy) = self.proxy.take() {
-                wasm_bindgen_futures::spawn_local(async move {
-                    assert!(proxy
-                        .send_event(
-                            State::new(window)
-                                .await
-                                .expect("Unable to create canvas!!!")
-                        )
-                        .is_ok())
-                });
-            }
-        }
+        self.state = Some(pollster::block_on(State::new(window)).unwrap());
     }
 
-    #[allow(unused_mut)]
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State) {
-        // This is where proxy.send_event() ends up
-        #[cfg(target_arch = "wasm32")]
-        {
-            event.window.request_redraw();
-            event.resize(
-                event.window.inner_size().width,
-                event.window.inner_size().height,
-            );
-        }
-        self.state = Some(event);
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, _: AppEvent) {
+        println!("EVENT RECEIVED");
     }
 
     fn device_event(
@@ -91,14 +41,22 @@ impl ApplicationHandler<State> for App {
         _device_id: DeviceId,
         event: DeviceEvent,
     ) {
-        let state = match &mut self.state {
-            Some(state) => state,
-            None => return,
+        let Some(state) = self.state.as_mut() else {
+            return;
         };
 
         if let DeviceEvent::MouseMotion { delta } = event {
             state.game_state.camera_controller.process_mouse(delta.0, delta.1);
         }
+    }
+
+    fn about_to_wait(&mut self, _: &ActiveEventLoop) {
+        let Some(state) = self.state.as_mut() else {
+            return;
+        };
+
+        state.update();
+        state.window.request_redraw();
     }
 
     fn window_event(
@@ -107,21 +65,26 @@ impl ApplicationHandler<State> for App {
         _window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let state = match &mut self.state {
-            Some(canvas) => canvas,
-            None => return,
+        let Some(state) = self.state.as_mut() else {
+            return;
         };
 
         match event {
+            WindowEvent::Focused(true) => {
+                state.window.set_cursor_visible(false);
+                state.window.set_cursor_grab(CursorGrabMode::Confined).unwrap_or(());
+            }
+            WindowEvent::Focused(false) => {
+                state.window.set_cursor_visible(true);
+                state.window.set_cursor_grab(CursorGrabMode::None).unwrap_or(());
+            }
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => {
-                state.update();
                 match state.render() {
                     Ok(_) => {}
-                    // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        let size = state.window.inner_size();
+                        let size: winit::dpi::PhysicalSize<u32> = state.window.inner_size();
                         state.resize(size.width, size.height);
                     }
                     Err(e) => {
@@ -141,24 +104,4 @@ impl ApplicationHandler<State> for App {
             _ => {}
         }
     }
-}
-
-pub fn run() -> anyhow::Result<()> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        env_logger::init();
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        console_log::init_with_level(log::Level::Info).unwrap_throw();
-    }
-
-    let event_loop = EventLoop::with_user_event().build()?;
-    let mut app = App::new(
-        #[cfg(target_arch = "wasm32")]
-        &event_loop,
-    );
-    event_loop.run_app(&mut app)?;
-
-    Ok(())
 }

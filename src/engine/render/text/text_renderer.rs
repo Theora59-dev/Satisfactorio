@@ -1,4 +1,4 @@
-use cgmath::Vector3;
+use cgmath::{Point3, Vector3};
 use wgpu_text::{glyph_brush::ab_glyph::FontRef, BrushBuilder, TextBrush};
 
 pub struct TextRenderer {
@@ -33,7 +33,7 @@ impl TextRenderer {
         self.height = height;
     }
 
-    pub fn update_text(&mut self, fps: u32, player_position: Vector3<f32>) {
+    pub fn update_text(&mut self, fps: u32, player_position: Point3<f32>) {
         self.current_text = format!(
             "FPS: {}\nPlayer position: ({:.2}, {:.2}, {:.2})",
             fps, player_position.x, player_position.y, player_position.z

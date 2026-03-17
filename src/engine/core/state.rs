@@ -35,10 +35,7 @@ impl State {
         // The instance is a handle to our GPU
         // BackendBit::PRIMARY => Vulkan + Metal + DX12 + Browser WebGPU
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            #[cfg(not(target_arch = "wasm32"))]
             backends: wgpu::Backends::PRIMARY,
-            #[cfg(target_arch = "wasm32")]
-            backends: wgpu::Backends::GL,
             ..Default::default()
         });
 
@@ -59,11 +56,7 @@ impl State {
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
                 // WebGL doesn't support all of wgpu's features, so if
                 // we're building for the web we'll have to disable some.
-                required_limits: if cfg!(target_arch = "wasm32") {
-                    wgpu::Limits::downlevel_webgl2_defaults()
-                } else {
-                    wgpu::Limits::default()
-                },
+                required_limits: wgpu::Limits::default(),
                 memory_hints: Default::default(),
                 trace: wgpu::Trace::Off,
             })
@@ -197,6 +190,49 @@ impl State {
                 immediate_size: 0,
             });
 
+        let wireframe_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[Vertex::buffer_layout()],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    // 4.
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                // cull_mode: None,
+                cull_mode: Some(wgpu::Face::Back),
+                // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+                polygon_mode: wgpu::PolygonMode::Line,
+                // Requires Features::DEPTH_CLIP_CONTROL
+                unclipped_depth: false,
+                // Requires Features::CONSERVATIVE_RASTERIZATION
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview_mask: None,
+            cache: None,
+        });
+
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -317,7 +353,7 @@ impl State {
         window.set_cursor_visible(false);
 
         let player = Player::new();
-        let camera_controller = CameraController::new(16.0, 0.5);
+        let camera_controller = CameraController::new(16.0, 0.0025);
         let world = World::new();
         let world_mesh = WorldMesh::new();
 
@@ -340,6 +376,7 @@ impl State {
         let renderer = Renderer::new(
             false,
 
+            wireframe_render_pipeline,
             render_pipeline,
             diffuse_bind_group,
             diffuse_texture,
@@ -383,7 +420,7 @@ impl State {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn frame_update(&mut self) {
         let now = Instant::now();
         let dt = now - self.frame_data.last_frame;
 
@@ -405,15 +442,13 @@ impl State {
                 self.game_state.camera.eye.x, self.game_state.camera.eye.y, self.game_state.camera.eye.z
             );
         }
-        
+    }
+
+    pub fn update(&mut self) {
+        self.frame_update();
         self.game_state.update(&self.queue, &mut self.renderer, self.frame_data.dt);
         
-        let player_pos = Vector3::new(
-            self.game_state.player.pos.x,
-            self.game_state.player.pos.y,
-            self.game_state.player.pos.z,
-        );
-        self.text_renderer.update_text(self.frame_data.fps, player_pos);
+        self.text_renderer.update_text(self.frame_data.fps, self.game_state.player.pos);
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -482,6 +517,10 @@ impl State {
     pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         if code == KeyCode::Escape && is_pressed {
             event_loop.exit();
+        }
+        else if code == KeyCode::Digit1 && is_pressed {
+            self.renderer.wireframe = !self.renderer.wireframe;
+            self.window.request_redraw();
         }
         else {
             self.game_state.camera_controller.handle_key(code, is_pressed);
