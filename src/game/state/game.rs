@@ -1,9 +1,15 @@
 use std::time::Instant;
 
-use cgmath::{InnerSpace, Vector3, num_traits::ToPrimitive};
+use cgmath::{num_traits::ToPrimitive, InnerSpace, Vector3};
 use wgpu::{Device, Queue};
 
-use crate::{engine::render::{camera::Camera, mesh::world::WorldMesh, render::Renderer}, game::{player::{camera::CameraController, player::Player}, world::{chunk::Chunk, world::World}}};
+use crate::{
+    engine::render::{camera::Camera, mesh::world::WorldMesh, render::Renderer},
+    game::{
+        player::{camera::CameraController, player::Player},
+        world::{chunk::Chunk, world::World},
+    },
+};
 
 pub struct GameState {
     pub world: World,
@@ -19,14 +25,14 @@ impl GameState {
         world_mesh: WorldMesh,
         camera: Camera,
         camera_controller: CameraController,
-        player: Player
+        player: Player,
     ) -> Self {
         Self {
             world,
             world_mesh,
             camera,
             camera_controller,
-            player
+            player,
         }
     }
 
@@ -58,7 +64,7 @@ impl GameState {
             mesh_start.elapsed().as_micros().to_f64().unwrap() / 1_000.0
         );
     }
-    
+
     pub fn update(&mut self, queue: &Queue, renderer: &mut Renderer, dt: f32) {
         self.player.update(
             dt,
@@ -66,7 +72,7 @@ impl GameState {
             &mut self.camera_controller,
             &mut renderer.camera_uniform,
             &renderer.camera_buffer,
-            queue
+            queue,
         );
     }
 }

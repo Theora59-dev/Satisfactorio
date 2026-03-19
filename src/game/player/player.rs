@@ -1,5 +1,10 @@
-use crate::{engine::render::camera::{Camera, CameraUniform}, game::{player::camera::CameraController, world::chunk::CHUNK_SIZE}};
-use cgmath::{InnerSpace, Vector3, num_traits::ToPrimitive};
+use std::f32::consts::PI;
+
+use crate::{
+    engine::render::camera::{Camera, CameraUniform},
+    game::{player::camera::CameraController, world::chunk::CHUNK_SIZE},
+};
+use cgmath::{num_traits::ToPrimitive, InnerSpace, Point3, Vector3};
 use wgpu::{Buffer, Queue};
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
@@ -8,8 +13,10 @@ const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 7;
 const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 1;
 
 pub struct Player {
+    uuid: i32,
     pub pos: cgmath::Point3<f32>,
     pub vel: cgmath::Vector3<f32>,
+    yaw: f32,
     pub horizontal_render_distance: u16,
     pub vertical_render_distance: u16,
 }
@@ -17,8 +24,10 @@ pub struct Player {
 impl Player {
     pub fn new() -> Player {
         return Player {
+            uuid: -1,
             pos: cgmath::Point3::new(0.0, 0.0, 0.0),
             vel: cgmath::Vector3::new(0.0, 0.0, 0.0),
+            yaw: 0.0,
             horizontal_render_distance: DEBUG_HORIZONTAL_RENDER_DISTANCE,
             vertical_render_distance: DEBUG_VERTICAL_RENDER_DISTANCE,
         };
@@ -29,7 +38,15 @@ impl Player {
         self.vertical_render_distance = vertical;
     }
 
-    pub fn update(&mut self, dt: f32, camera: &mut Camera, camera_controller: &mut CameraController, camera_uniform: &mut CameraUniform, camera_buffer: &Buffer, queue: &Queue) {
+    pub fn update(
+        &mut self,
+        dt: f32,
+        camera: &mut Camera,
+        camera_controller: &mut CameraController,
+        camera_uniform: &mut CameraUniform,
+        camera_buffer: &Buffer,
+        queue: &Queue,
+    ) {
         let forward = camera.forward();
         let right = camera.right();
         let up = cgmath::Vector3::unit_y();
@@ -56,26 +73,43 @@ impl Player {
 
         if direction.magnitude2() > 0.0 {
             self.vel = direction.normalize() * (camera_controller.speed * dt);
-        }
-        else {
+        } else {
             self.vel = Vector3::new(0.0, 0.0, 0.0);
         }
 
         self.pos += self.vel;
+        self.yaw = camera.get_yaw() % (2.0 * PI);
 
         camera_controller.update_camera(camera, &self);
         camera_uniform.update_view_proj(&camera);
-        
-        queue.write_buffer(
-            &camera_buffer,
-            0,
-            bytemuck::cast_slice(&[*camera_uniform]),
+
+        println!(
+            "Player: x={}, y={}, z={}, yaw={:.02}",
+            self.pos.x, self.pos.y, self.pos.z, self.yaw
         );
+
+        queue.write_buffer(&camera_buffer, 0, bytemuck::cast_slice(&[*camera_uniform]));
     }
 
     pub fn get_pos(&self) -> cgmath::Point3<f32> {
         self.pos
     }
+
+    pub fn set_pos(&mut self, pos: cgmath::Point3<f32>) {
+        self.pos = pos;
+    }
+
+    pub fn teleport(&mut self, x: f32, y: f32, z: f32) {
+        println!(
+            "The player {} has been teleported from {:?} to {:?}",
+            self.uuid,
+            self.get_pos(),
+            Point3 { x: x, y: y, z: z }
+        );
+        self.set_pos(Point3 { x: x, y: y, z: z });
+    }
+
+    pub fn break_block_at(block_pos: Point3<f32>) {}
 
     /// returns ``[min_cx, max_cx, min_cy, max_cy, min_cz, max_cz]``
     pub fn get_rendered_chunk_range(&self) -> [i32; 6] {
@@ -139,6 +173,9 @@ impl Player {
             .to_u32()
             .unwrap_or(1);
 
-        return ([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz], chunk_number);
+        return (
+            [min_cx, max_cx, min_cy, max_cy, min_cz, max_cz],
+            chunk_number,
+        );
     }
 }

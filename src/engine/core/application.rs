@@ -7,9 +7,7 @@ use crate::engine::core::state::State;
 use winit::event::{DeviceEvent, DeviceId, KeyEvent, WindowEvent};
 use winit::window::{CursorGrabMode, Window};
 
-pub enum AppEvent {
-
-}
+pub enum AppEvent {}
 
 pub struct App {
     state: Option<State>,
@@ -17,9 +15,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        Self {
-            state: None,
-        }
+        Self { state: None }
     }
 }
 
@@ -46,7 +42,10 @@ impl ApplicationHandler<AppEvent> for App {
         };
 
         if let DeviceEvent::MouseMotion { delta } = event {
-            state.game_state.camera_controller.process_mouse(delta.0, delta.1);
+            state
+                .game_state
+                .camera_controller
+                .process_mouse(delta.0, delta.1);
         }
     }
 
@@ -72,26 +71,30 @@ impl ApplicationHandler<AppEvent> for App {
         match event {
             WindowEvent::Focused(true) => {
                 state.window.set_cursor_visible(false);
-                state.window.set_cursor_grab(CursorGrabMode::Confined).unwrap_or(());
+                state
+                    .window
+                    .set_cursor_grab(CursorGrabMode::Confined)
+                    .unwrap_or(());
             }
             WindowEvent::Focused(false) => {
                 state.window.set_cursor_visible(true);
-                state.window.set_cursor_grab(CursorGrabMode::None).unwrap_or(());
+                state
+                    .window
+                    .set_cursor_grab(CursorGrabMode::None)
+                    .unwrap_or(());
             }
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
-            WindowEvent::RedrawRequested => {
-                match state.render() {
-                    Ok(_) => {}
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        let size: winit::dpi::PhysicalSize<u32> = state.window.inner_size();
-                        state.resize(size.width, size.height);
-                    }
-                    Err(e) => {
-                        log::error!("Unable to render {}", e);
-                    }
+            WindowEvent::RedrawRequested => match state.render() {
+                Ok(_) => {}
+                Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                    let size: winit::dpi::PhysicalSize<u32> = state.window.inner_size();
+                    state.resize(size.width, size.height);
                 }
-            }
+                Err(e) => {
+                    log::error!("Unable to render {}", e);
+                }
+            },
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {

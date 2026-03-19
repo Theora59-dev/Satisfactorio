@@ -1,6 +1,5 @@
 use cgmath::{Deg, InnerSpace, Matrix4, Point3, Vector3};
 
-
 #[rustfmt::skip]
 pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
     cgmath::Vector4::new(1.0, 0.0, 0.0, 0.0),
@@ -78,9 +77,11 @@ impl Camera {
         self.eye = position;
     }
 
-    pub fn get_position(&self) -> cgmath::Point3<f32> {
-        self.eye
+    pub fn get_yaw(&self) -> f32 {
+        self.yaw
     }
+
+    pub fn raycast() {}
 }
 
 // We need this for Rust to store our data correctly for the shaders
