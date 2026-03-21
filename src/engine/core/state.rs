@@ -1,14 +1,8 @@
 use crate::common::geometry::vertex::Vertex;
 use crate::engine::core::inputs::InputState;
-use crate::engine::render::camera::{Camera, CameraUniform};
-use crate::engine::render::mesh::world::WorldMesh;
-use crate::engine::render::render::{FrameData, GpuContext, RenderManager, Renderer};
+use crate::engine::render::camera::RenderCamera;
+use crate::engine::render::render::{EngineFrameData, GameFrameData, GpuContext, RenderManager, Renderer};
 use crate::engine::render::text::TextRenderer;
-use crate::game::player::camera::CameraController;
-use cgmath::Vector3;
-use crate::game::player::player::Player;
-use crate::game::state::game::GameState;
-use crate::game::world::world::World;
 use std::sync::Arc;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
@@ -19,7 +13,8 @@ use winit::window::Window;
 // This will store the state of our game
 pub struct State {
     pub window: Arc<Window>,
-    pub frame_data: FrameData,
+    pub engine_frame_data: EngineFrameData,
+    pub game_frame_data: GameFrameData,
     pub renderer: Renderer,
     text_renderer: TextRenderer,
     pub inputs: InputState,
@@ -130,18 +125,7 @@ impl State {
             label: Some("diffuse_bind_group"),
         });
 
-        let camera = Camera::new(
-            (16.0, 16.0, 16.0).into(),
-            (0.0, 0.0, 0.0).into(),
-            cgmath::Vector3::unit_y(),
-            config.width as f32 / config.height as f32,
-            70.0,
-            0.01,
-            10000.0,
-        );
-
-        let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        let camera_uniform = RenderCamera::new();
 
         let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
@@ -349,13 +333,10 @@ impl State {
             .expect("Capture souris");
         window.set_cursor_visible(false);
 
-        let frame_data = FrameData::new(
-            0.0,
-            0,
-            0.0,
-            Instant::now(),
-            0,
-        );
+        let engine_frame_data = EngineFrameData::new();
+        let mut game_frame_data = GameFrameData::blank();
+
+        game_frame_data.camera = camera_uniform;
 
         let gpu_context = GpuContext {
             surface,
@@ -366,7 +347,7 @@ impl State {
 
         let render_manager = RenderManager::new();
 
-        let mut renderer = Renderer::new(
+        let renderer = Renderer::new(
             false,
 
             wireframe_render_pipeline,
@@ -374,7 +355,6 @@ impl State {
             diffuse_bind_group,
             diffuse_texture,
             
-            camera_uniform,
             camera_buffer,
             camera_bind_group,
             
@@ -382,7 +362,6 @@ impl State {
             gizmo_buffer,
 
             (size.width, size.height),
-            70.0,
 
             gpu_context,
             render_manager
@@ -399,7 +378,8 @@ impl State {
 
         Ok(Self {
             window,
-            frame_data,
+            engine_frame_data,
+            game_frame_data,
             renderer,
             text_renderer,
             inputs,
@@ -418,29 +398,29 @@ impl State {
 
     pub fn frame_update(&mut self) {
         let now = Instant::now();
-        let dt = now - self.frame_data.last_frame;
+        let dt = now - self.engine_frame_data.last_frame;
 
-        self.frame_data.last_frame = now;
-        self.frame_data.dt = dt.as_secs_f32();
+        self.engine_frame_data.last_frame = now;
+        self.engine_frame_data.dt = dt.as_secs_f32();
 
-        self.frame_data.frame_count += 1;
-        self.frame_data.fps_timer += dt.as_secs_f32();
+        self.engine_frame_data.frame_count += 1;
+        self.engine_frame_data.fps_timer += dt.as_secs_f32();
 
-        if self.frame_data.fps_timer >= 1.0 {
-            self.frame_data.fps = self.frame_data.frame_count;
-            self.frame_data.frame_count = 0;
-            self.frame_data.fps_timer = self.frame_data.fps_timer - 1.0;
+        if self.engine_frame_data.fps_timer >= 1.0 {
+            self.engine_frame_data.fps = self.engine_frame_data.frame_count;
+            self.engine_frame_data.frame_count = 0;
+            self.engine_frame_data.fps_timer = self.engine_frame_data.fps_timer - 1.0;
 
             println!(
                 "FPS: {} dt: {}s",
-                self.frame_data.fps, self.frame_data.dt,
+                self.engine_frame_data.fps, self.engine_frame_data.dt,
             );
         }
     }
 
     pub fn update(&mut self) {
         self.frame_update();
-        self.text_renderer.update_text(self.frame_data.fps);
+        self.text_renderer.update_text(self.engine_frame_data.fps);
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -503,25 +483,21 @@ impl State {
         // self.queue.submit(std::iter::once(encoder.finish()));
         // output.present();
 
-        self.renderer.render(&self.renderer.gpu_context.surface, &self.renderer.gpu_context.device, &self.renderer.gpu_context.queue);
+        self.renderer.render(&self.game_frame_data.camera);
 
         Ok(())
     }
 
     pub fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-        if !is_pressed {
-            return;
-        }
-
-        if code == KeyCode::Escape {
+        if code == KeyCode::Escape && is_pressed {
             event_loop.exit();
         }
-        else if code == KeyCode::Digit1 {
+        else if code == KeyCode::Digit1 && is_pressed {
             self.renderer.wireframe = !self.renderer.wireframe;
             self.window.request_redraw();
         }
         else {
-            self.inputs.set_key_press(code);
+            self.inputs.set_key_press(code, is_pressed);
             // self.game_state.camera_controller.handle_key(code, is_pressed);
         }
     }

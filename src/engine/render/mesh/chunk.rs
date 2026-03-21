@@ -1,13 +1,9 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use cgmath::num_traits::ToPrimitive;
-use wgpu::{util::DeviceExt, Device};
-
 use crate::{
     common::geometry::{direction::Direction, vertex::Vertex},
     engine::render::{
-        buffer::BufferData,
-        mesh::{face_mask::FaceMask, texto::RenderFaceTexto}, render::{MeshData, MeshId, RenderManager, Renderer},
+        mesh::face_mask::FaceMask, render::{MeshData, MeshId, Renderer},
     },
     game::world::{
         block::BlockInstance,

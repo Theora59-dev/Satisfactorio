@@ -1,9 +1,8 @@
 use std::{collections::HashMap, sync::{Arc, Mutex}};
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use wgpu::Device;
 
-use crate::{engine::render::{mesh::chunk::ChunkMesh, render::{RenderManager, Renderer}}, game::{player::player::Player, world::world::World}};
+use crate::{engine::render::{mesh::chunk::ChunkMesh, render::Renderer}, game::{player::player::Player, world::world::World}};
 
 pub struct WorldMesh {
     pub meshes: HashMap<(i32, i32, i32), Arc<ChunkMesh>>,

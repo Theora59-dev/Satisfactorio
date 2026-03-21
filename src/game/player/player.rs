@@ -1,15 +1,15 @@
-use crate::{engine::render::camera::{Camera, CameraUniform}, game::{player::camera::CameraController, world::chunk::CHUNK_SIZE}};
-use cgmath::{InnerSpace, Vector3, num_traits::ToPrimitive};
-use wgpu::{Buffer, Queue};
+use crate::{engine::{core::inputs::InputState, render::camera::Camera}, game::{player::camera::CameraController, world::chunk::CHUNK_SIZE}};
+use cgmath::{Point3, num_traits::ToPrimitive};
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
-const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 1;
+const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 5;
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
-const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 3;
+const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 1;
 
 pub struct Player {
-    pub pos: cgmath::Point3<f32>,
-    pub vel: cgmath::Vector3<f32>,
+    pub position: Point3<f32>,
+    pub camera: Camera,
+    pub camera_controller: CameraController,
     pub horizontal_render_distance: u16,
     pub vertical_render_distance: u16,
 }
@@ -17,68 +17,25 @@ pub struct Player {
 impl Player {
     pub fn new() -> Player {
         return Player {
-            pos: cgmath::Point3::new(0.0, 0.0, 0.0),
-            vel: cgmath::Vector3::new(0.0, 0.0, 0.0),
+            position: Point3::new(0.0, 0.0, 0.0),
+            camera: Camera::new(
+                Point3::new(0.0, 1.0, 0.0),
+                70.0
+            ),
+            camera_controller: CameraController::new(
+                32.0,
+                0.015
+            ),
             horizontal_render_distance: DEBUG_HORIZONTAL_RENDER_DISTANCE,
             vertical_render_distance: DEBUG_VERTICAL_RENDER_DISTANCE,
         };
     }
 
-    pub fn set_render_distance(&mut self, horizontal: u16, vertical: u16) {
-        self.horizontal_render_distance = horizontal;
-        self.vertical_render_distance = vertical;
-    }
-
-    pub fn update(&mut self, dt: f32, camera: &mut Camera, camera_controller: &mut CameraController, camera_uniform: &mut CameraUniform, camera_buffer: &Buffer, queue: &Queue) {
-        let forward = camera.forward();
-        let right = camera.right();
-        let up = cgmath::Vector3::unit_y();
-        let mut direction = Vector3::new(0.0, 0.0, 0.0);
-
-        if camera_controller.is_forward_pressed {
-            direction += forward;
-        }
-        if camera_controller.is_backward_pressed {
-            direction -= forward
-        }
-        if camera_controller.is_right_pressed {
-            direction += right;
-        }
-        if camera_controller.is_left_pressed {
-            direction -= right;
-        }
-        if camera_controller.is_up_pressed {
-            direction += up;
-        }
-        if camera_controller.is_down_pressed {
-            direction -= up;
-        }
-
-        if direction.magnitude2() > 0.0 {
-            self.vel = direction.normalize() * (camera_controller.speed * dt);
-        }
-        else {
-            self.vel = Vector3::new(0.0, 0.0, 0.0);
-        }
-
-        self.pos += self.vel;
-
-        camera_controller.update_camera(camera, &self);
-        camera_uniform.update_view_proj(&camera);
-
-        // println!("Player pos: ({:.2}, {:.2}, {:.2})", self.pos.x, self.pos.y, self.pos.z);
-        // println!("Camera pos: ({:.2}, {:.2}, {:.2})", camera.eye.x, camera.eye.y, camera.eye.z);
-        // println!("Camera forward: ({:.2}, {:.2}, {:.2})", camera.forward().x, camera.forward().y, camera.forward().z);
-        
-        queue.write_buffer(
-            &camera_buffer,
-            0,
-            bytemuck::cast_slice(&[*camera_uniform]),
-        );
-    }
-
-    pub fn get_pos(&self) -> cgmath::Point3<f32> {
-        self.pos
+    pub fn update(&mut self, dt: f32, inputs: &InputState) {
+        self.camera_controller.update_camera(dt, &mut self.camera, inputs);
+        self.position = self.camera.position;
+        // println!("Player position: ({:.2}, {:.2}, {:.2})", self.position.x, self.position.y, self.position.z);
+        // println!("Camera yaw/pitch: {:.2} {:.2}", self.camera.yaw, self.camera.pitch);
     }
 
     /// returns ``[min_cx, max_cx, min_cy, max_cy, min_cz, max_cz]``
@@ -94,9 +51,9 @@ impl Player {
             .unwrap()
             .div_euclid(2.0);
 
-        let cx = self.pos.x.div_euclid(CHUNK_SIZE as f32);
-        let cy = self.pos.y.div_euclid(CHUNK_SIZE as f32);
-        let cz = self.pos.z.div_euclid(CHUNK_SIZE as f32);
+        let cx = self.position.x.div_euclid(CHUNK_SIZE as f32);
+        let cy = self.position.y.div_euclid(CHUNK_SIZE as f32);
+        let cz = self.position.z.div_euclid(CHUNK_SIZE as f32);
 
         let min_cx = (cx - halfed_hrd).floor().to_i32().unwrap();
         let max_cx = (cx + halfed_hrd).floor().to_i32().unwrap();
@@ -108,14 +65,7 @@ impl Player {
         return [min_cx, max_cx, min_cy, max_cy, min_cz, max_cz];
     }
 
-    pub fn get_rendered_chunk_number(&self) -> u32 {
-        let [min_cx, max_cx, min_cy, max_cy, min_cz, max_cz] = self.get_rendered_chunk_range();
-        return ((max_cx - min_cx) * (max_cy - min_cy) * (max_cz - min_cz))
-            .to_u32()
-            .unwrap_or(1);
-    }
-
-    /// returns ``([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz, chunk_number], chunk_number)``
+    /// returns ``([min_cx, max_cx, min_cy, max_cy, min_cz, max_cz], chunk_number)``
     pub fn get_rendered_chunk_data(&self) -> ([i32; 6], u32) {
         let halfed_hrd = self
             .horizontal_render_distance
@@ -128,9 +78,9 @@ impl Player {
             .unwrap()
             .div_euclid(2.0);
 
-        let cx = self.pos.x.div_euclid(CHUNK_SIZE as f32);
-        let cy = self.pos.y.div_euclid(CHUNK_SIZE as f32);
-        let cz = self.pos.z.div_euclid(CHUNK_SIZE as f32);
+        let cx = self.position.x.div_euclid(CHUNK_SIZE as f32);
+        let cy = self.position.y.div_euclid(CHUNK_SIZE as f32);
+        let cz = self.position.z.div_euclid(CHUNK_SIZE as f32);
 
         let min_cx = (cx - halfed_hrd).floor().to_i32().unwrap();
         let max_cx = (cx + halfed_hrd).floor().to_i32().unwrap();

@@ -1,36 +1,27 @@
 use std::time::Instant;
 
-use cgmath::{EuclideanSpace, InnerSpace, Matrix4, Vector3, dot, num_traits::ToPrimitive};
-use wgpu::{Device, Queue};
+use cgmath::{EuclideanSpace, Matrix4, Vector3, dot, num_traits::ToPrimitive};
 
-use crate::{common::geometry::plane::Plane, engine::{core::inputs::InputState, render::{camera::Camera, mesh::world::WorldMesh, render::{RenderManager, Renderer}}}, game::{player::{camera::CameraController, player::Player}, world::{chunk::{CHUNK_SIZE, Chunk}, world::World}}};
+use crate::{common::geometry::plane::Plane, engine::{core::{application::AppState, inputs::InputState}, render::{mesh::world::WorldMesh, render::{EngineFrameData, GameFrameData, RenderOptions, Renderer}}}, game::{player::player::Player, world::{chunk::{CHUNK_SIZE_F, Chunk}, world::World}}};
 
 pub struct GameState {
     pub world: World,
     pub world_mesh: WorldMesh,
-    pub camera: Camera,
-    pub camera_controller: CameraController,
     pub player: Player,
 }
 
 impl GameState {
-    pub fn new(
-        world: World,
-        world_mesh: WorldMesh,
-        camera: Camera,
-        camera_controller: CameraController,
-        player: Player
-    ) -> Self {
+    pub fn new() -> Self {
         Self {
-            world,
-            world_mesh,
-            camera,
-            camera_controller,
-            player
+            player: Player::new(),
+            world: World::new(),
+            world_mesh: WorldMesh::new(),
         }
     }
+}
 
-    pub fn init(&mut self, renderer: &mut Renderer) {
+impl AppState for GameState {
+    fn init(&mut self, renderer: &mut Renderer) {
         let world_start = Instant::now();
 
         let [min_x, max_x, min_y, max_y, min_z, max_z] = self.player.get_rendered_chunk_range();
@@ -59,51 +50,41 @@ impl GameState {
         );
     }
     
-    pub fn update(&mut self, renderer: &mut Renderer, inputs: &InputState, dt: f32) {
-        let mouse = inputs.get_mouse_delta();
-        self.camera_controller.process_keys(inputs);
-        self.camera_controller.process_mouse(mouse.0, mouse.1);
-        self.player.update(
-            dt,
-            &mut self.camera,
-            &mut self.camera_controller,
-            &mut renderer.camera_uniform,
-            &mut renderer.camera_buffer,
-            &mut renderer.gpu_context.queue
-        );
+    fn update(
+        &mut self,
+        frame: &EngineFrameData,
+        inputs: &InputState,
+        render_options: &RenderOptions,
+        data: &mut GameFrameData,
+    ) {
+        self.player.update(frame.dt, inputs);
 
-        renderer.render_manager.clear_render_queue();
-
-        let cam_forward = self.camera.forward();
-        let cam_eye = self.camera.eye.to_vec();
-
-        let view_proj = renderer.camera_uniform.get_view_proj();
+        let view_proj = self.player.camera.get_view_proj(render_options);
+        let cam_forward = self.player.camera.forward();
+        let cam_position = self.player.camera.position.to_vec();
         let frustum = extract_camera_frustum_planes(view_proj);
 
         for mesh in self.world_mesh.meshes.iter() {
-
-            // Check if the vertex buffer is correctly configured before doing any math.
-            // let Some(chunk_vertex_buffer) = chunk_mesh.1.buffer.vertex_buffer.as_ref() else {
-            //     println!("CHUNK RENDERING ERROR: VERTEX BUFFER NOT SET");
-            //     continue;
-            // };
-            // let Some(chunk_vertex_number) = chunk_mesh.1.buffer.vertex_number else {
-            //     println!("CHUNK RENDERING ERROR: VERTEX NUMBER NOT SET");
-            //     continue;
-            // };
+            // Represents the vector that goes from the world origin to the chunk's opposite boundaries
+            let chunk_vector = Vector3::new(
+                CHUNK_SIZE_F,
+                CHUNK_SIZE_F,
+                CHUNK_SIZE_F
+            );
 
             // Vertex as Vector3 in the world that is equal to the local origin of the current chunk
             let min = Vector3::new(
-                (mesh.0.0) as f32 * CHUNK_SIZE as f32,
-                (mesh.0.1) as f32 * CHUNK_SIZE as f32,
-                (mesh.0.2) as f32 * CHUNK_SIZE as f32,
-            );
+                (mesh.0.0) as f32,
+                (mesh.0.1) as f32,
+                (mesh.0.2) as f32,
+            ) * CHUNK_SIZE_F;
+
             // Vertex as Vector3 in the world that is equal to the absolute opposite of the local origin of the current chunk
-            let max = min + Vector3::new(CHUNK_SIZE as f32, CHUNK_SIZE as f32, CHUNK_SIZE as f32);
+            let max = min + chunk_vector;
 
             // Check if the chunk is behind the camera.
             // This allows us to pre-filter chunks before going too further in the tests, at least for chunks that shouldn't be drawn to screen.
-            if is_chunk_behind_camera(&min, &max, &cam_forward, &cam_eye) {
+            if is_chunk_behind_camera(&min, &max, &cam_forward, &cam_position) {
                 continue;
             }
 
@@ -114,8 +95,20 @@ impl GameState {
                 continue;
             }
 
-            renderer.render_manager.mark_mesh_for_rendering(mesh.1.mesh_id.unwrap());
+            data.visible_meshes.push(mesh.1.mesh_id.unwrap());
         }
+
+        data.camera.update_view_proj(view_proj);
+    }
+
+    fn fixed_update(
+        &mut self,
+        _frame: &EngineFrameData,
+        _inputs: &InputState,
+        _render_options: &RenderOptions,
+        _data: &mut GameFrameData,
+    ) {
+        // ...
     }
 }
 

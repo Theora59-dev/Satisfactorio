@@ -1,4 +1,3 @@
-use cgmath::{Point3, Vector3};
 use wgpu_text::{glyph_brush::ab_glyph::FontRef, BrushBuilder, TextBrush};
 
 pub struct TextRenderer {

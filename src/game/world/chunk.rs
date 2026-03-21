@@ -1,10 +1,7 @@
-use std::f32::consts::PI;
-
-use cgmath::num_traits::ToPrimitive;
-
 use crate::game::world::block::BlockInstance;
 
 pub const CHUNK_SIZE: i32 = 32;
+pub const CHUNK_SIZE_F: f32 = CHUNK_SIZE as f32;
 pub const CHUNK_SIZE_SQR: i32 = CHUNK_SIZE * CHUNK_SIZE;
 pub const CHUNK_BLOCK_NUMBER: usize = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) as usize;
 pub const LAST_CHUNK_AXIS_INDEX: i32 = CHUNK_SIZE - 1;

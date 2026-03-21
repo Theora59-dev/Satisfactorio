@@ -5,41 +5,48 @@ use winit::{application::ApplicationHandler, keyboard::PhysicalKey};
 
 use crate::engine::core::inputs::InputState;
 use crate::engine::core::state::State;
-use crate::engine::render::camera::Camera;
-use crate::engine::render::render::Renderer;
+use crate::engine::render::render::{EngineFrameData, GameFrameData, RenderOptions, Renderer};
 use winit::event::{DeviceEvent, DeviceId, KeyEvent, WindowEvent};
 use winit::window::{CursorGrabMode, Window};
 
 pub enum AppEvent {
-
+    // events we will be able to send from the state
 }
 
-pub struct App<I: FnMut(&mut Renderer),U: Fn(f32, &mut Renderer, &InputState)> {
-    state: Option<State>,
-    init: I,
-    update: U,
+pub trait AppState {
+    fn init(&mut self, renderer: &mut Renderer);
+    fn update(&mut self, frame: &EngineFrameData, inputs: &InputState, render_options: &RenderOptions, data: &mut GameFrameData);
+    fn fixed_update(&mut self, frame: &EngineFrameData, inputs: &InputState, render_options: &RenderOptions, data: &mut GameFrameData);
+    // ...
 }
 
-impl<I: FnMut(&mut Renderer), U: Fn(f32, &mut Renderer, &InputState)> App<I, U> {
-    pub fn new(
-        init: I,
-        update: U
-    ) -> Self {
+pub struct App<S : AppState> {
+    engine_state: Option<State>,
+    app_state: S,
+    app_state_init: bool
+}
+
+impl<S : AppState> App<S> {
+    pub fn new(app_state: S) -> Self {
         Self {
-            state: None,
-            init,
-            update,
+            engine_state: None,
+            app_state: app_state,
+            app_state_init: false
         }
     }
 }
 
-impl<I: FnMut(&mut Renderer), U: Fn(f32, &mut Renderer, &InputState)> ApplicationHandler<AppEvent> for App<I, U> {
+impl<S : AppState> ApplicationHandler<AppEvent> for App<S> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         println!("resumed");
         let window_attributes = Window::default_attributes();
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
-        self.state = Some(pollster::block_on(State::new(window)).unwrap());
-        (self.init)(&mut self.state.as_mut().unwrap().renderer);
+        self.engine_state = Some(pollster::block_on(State::new(window)).unwrap());
+        
+        if !self.app_state_init {
+            self.app_state.init(&mut self.engine_state.as_mut().unwrap().renderer);
+            self.app_state_init = true;
+        }
     }
 
     fn user_event(&mut self, _event_loop: &ActiveEventLoop, _: AppEvent) {
@@ -52,7 +59,7 @@ impl<I: FnMut(&mut Renderer), U: Fn(f32, &mut Renderer, &InputState)> Applicatio
         _device_id: DeviceId,
         event: DeviceEvent,
     ) {
-        let Some(state) = self.state.as_mut() else {
+        let Some(state) = self.engine_state.as_mut() else {
             return;
         };
 
@@ -63,15 +70,27 @@ impl<I: FnMut(&mut Renderer), U: Fn(f32, &mut Renderer, &InputState)> Applicatio
     }
 
     fn about_to_wait(&mut self, _: &ActiveEventLoop) {
-        let Some(state) = self.state.as_mut() else {
+        let Some(state) = self.engine_state.as_mut() else {
             return;
         };
 
         state.update();
-        (self.update)(state.frame_data.dt, &mut state.renderer, &state.inputs);
+        state.game_frame_data.reset();
+
+        self.app_state.update(
+            &mut state.engine_frame_data,
+            &state.inputs,
+            &state.renderer.render_options,
+            &mut state.game_frame_data,
+        );
+        
+        for id in state.game_frame_data.visible_meshes.iter() {
+            state.renderer.render_manager.mark_mesh_for_rendering(*id);
+        }
+
         state.window.request_redraw();
 
-        state.inputs.clear_keys();
+        // state.inputs.clear_keys();
         state.inputs.set_mouse_delta((0.0, 0.0));
     }
 
@@ -81,7 +100,7 @@ impl<I: FnMut(&mut Renderer), U: Fn(f32, &mut Renderer, &InputState)> Applicatio
         _window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let Some(state) = self.state.as_mut() else {
+        let Some(state) = self.engine_state.as_mut() else {
             return;
         };
 

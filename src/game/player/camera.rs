@@ -1,18 +1,13 @@
+use std::f32::consts::FRAC_PI_2;
+
+use cgmath::Vector3;
 use winit::keyboard::KeyCode;
 
-use crate::{engine::{core::inputs::InputState, render::camera::Camera}, game::player::player::Player};
+use crate::engine::{core::inputs::InputState, render::camera::Camera};
 
 pub struct CameraController {
     pub speed: f32,
-    mouse_sensitivity: f32,
-    pub is_forward_pressed: bool,
-    pub is_backward_pressed: bool,
-    pub is_left_pressed: bool,
-    pub is_right_pressed: bool,
-    pub is_up_pressed: bool,
-    pub is_down_pressed: bool,
-    pub mouse_delta_x: f32,
-    pub mouse_delta_y: f32,
+    pub mouse_sensitivity: f32,
 }
 
 impl CameraController {
@@ -20,80 +15,59 @@ impl CameraController {
         Self {
             speed,
             mouse_sensitivity,
-            is_forward_pressed: false,
-            is_backward_pressed: false,
-            is_left_pressed: false,
-            is_right_pressed: false,
-            is_up_pressed: false,
-            is_down_pressed: false,
-            mouse_delta_x: 0.0,
-            mouse_delta_y: 0.0,
         }
     }
 
-    pub fn handle_key(&mut self, code: KeyCode, is_pressed: bool) -> bool {
-        match code {
-            // ZQSD + WASD
-            KeyCode::KeyW | KeyCode::KeyZ => {
-                self.is_forward_pressed = is_pressed;
-                true
-            }
-            KeyCode::KeyS => {
-                self.is_backward_pressed = is_pressed;
-                true
-            }
-            KeyCode::KeyA | KeyCode::KeyQ => {
-                self.is_left_pressed = is_pressed;
-                true
-            }
-            KeyCode::KeyD => {
-                self.is_right_pressed = is_pressed;
-                true
-            }
+    pub fn get_delta_position(&self, camera: &Camera, inputs: &InputState) -> Vector3<f32> {
+        let forward = camera.forward();
+        let right = camera.right();
+        let up = camera.up();
 
-            // Vertical (optionnel)
-            KeyCode::Space => {
-                self.is_up_pressed = is_pressed;
-                true
-            }
-            KeyCode::ShiftLeft => {
-                self.is_down_pressed = is_pressed;
-                true
-            }
-
-            _ => false,
+        let mut delta_position = Vector3::new(0.0, 0.0, 0.0);
+        
+        // ZQSD + WASD
+        if inputs.is_key_pressed(KeyCode::KeyW) || inputs.is_key_pressed(KeyCode::KeyZ) {
+            delta_position += forward;
         }
-    }
-
-    pub fn process_keys(&mut self, inputs: &InputState) {
-        self.is_backward_pressed = false;
-        self.is_left_pressed = false;
-        self.is_right_pressed = false;
-        self.is_up_pressed = false;
-        self.is_down_pressed = false;
-        self.is_forward_pressed = false;
-        for key in inputs.get_pressed_keys() {
-            self.handle_key(key, true);
+        if inputs.is_key_pressed(KeyCode::KeyS) {
+            delta_position -= forward;
         }
+        if inputs.is_key_pressed(KeyCode::KeyA) || inputs.is_key_pressed(KeyCode::KeyQ) {
+            delta_position -= right;
+        }
+        if inputs.is_key_pressed(KeyCode::KeyD) {
+            delta_position += right;
+        }
+
+        // Vertical (optionnel)
+        if inputs.is_key_pressed(KeyCode::Space) {
+            delta_position += up;
+        }
+        if inputs.is_key_pressed(KeyCode::ShiftLeft) {
+            delta_position -= up;
+        }
+
+        delta_position * self.speed
+
     }
 
-    pub fn process_mouse(&mut self, dx: f64, dy: f64) {
-        self.mouse_delta_x += dx as f32;
-        self.mouse_delta_y += dy as f32;
+    pub fn get_delta_mouse_position(&self, inputs: &InputState) -> (f32, f32) {
+        let (dx, dy) = inputs.get_mouse_delta();
+
+        let yaw = (dx as f32) * self.mouse_sensitivity;
+        let pitch = -(dy as f32) * self.mouse_sensitivity;
+
+        return (yaw, pitch);
     }
 
-    pub fn update_camera(&mut self, camera: &mut Camera, player: &Player) {
-        // 1. Sync position joueur → camera (TOUJOURS)
-        camera.eye = player.pos;
+    pub fn update_camera(&mut self, dt: f32, camera: &mut Camera, inputs: &InputState) {
+        camera.position += self.get_delta_position(camera, inputs) * dt;
+        
+        const CLAMPED_PITCH: f32 = FRAC_PI_2 - 0.01;
+        let (yaw, pitch) = self.get_delta_mouse_position(inputs);
 
-        // 2. Rotation souris (yaw/pitch) UNIQUEMENT
-        camera.yaw += self.mouse_delta_x * self.mouse_sensitivity;
-        camera.pitch -= self.mouse_delta_y * self.mouse_sensitivity;
-        self.mouse_delta_x = 0.0;
-        self.mouse_delta_y = 0.0;
-
-        // Clamp pitch
-        let max_pitch = std::f32::consts::FRAC_PI_2 - 0.01;
-        camera.pitch = camera.pitch.clamp(-max_pitch, max_pitch);
+        camera.yaw += yaw;
+        camera.pitch += pitch;
+        camera.pitch = camera.pitch.clamp(-CLAMPED_PITCH, CLAMPED_PITCH);
     }
 }
