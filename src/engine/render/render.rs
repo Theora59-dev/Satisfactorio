@@ -145,7 +145,6 @@ impl MeshData {
             let len = indices.len() as u32;
             Some((indices, IndexFormat::Uint32, len))
         }
-
         else {
             None
         };
