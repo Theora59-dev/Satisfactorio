@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Instant};
 
-use wgpu::{BindGroup, Buffer, BufferUsages, Device, IndexFormat, Queue, RenderPipeline, wgt::BufferDescriptor};
+use wgpu::{BindGroup, Buffer, BufferUsages, Device, IndexFormat, Queue, RenderPipeline, TextureView, wgt::BufferDescriptor};
 
 use crate::{
     common::geometry::vertex::Vertex,
@@ -76,6 +76,9 @@ pub struct Renderer {
     pub render_manager: RenderManager,
 
     pub render_options: RenderOptions,
+
+    pub depth_texture: wgpu::Texture,
+    pub depth_view: TextureView
 }
 
 impl EngineFrameData {
@@ -434,6 +437,9 @@ impl Renderer {
 
         gpu_context: GpuContext,
         render_manager: RenderManager,
+
+        depth_texture: wgpu::Texture,
+        depth_view: TextureView
     ) -> Self {
         Self {
             is_surface_configured,
@@ -460,7 +466,10 @@ impl Renderer {
                 (dimensions.0 as f32) / (dimensions.1 as f32),
                 0.1,
                 1000.0
-            )
+            ),
+
+            depth_texture,
+            depth_view
         }
     }
 
@@ -507,7 +516,14 @@ impl Renderer {
                         store: wgpu::StoreOp::Store,
                     },
                 })],
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0), // on clear à fond (loin)
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
                 occlusion_query_set: None,
                 timestamp_writes: None,
                 multiview_mask: None,

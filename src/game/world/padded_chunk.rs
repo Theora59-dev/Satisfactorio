@@ -56,11 +56,21 @@ impl PaddedChunk {
         return padded_chunk;
     }
 
+    /// Abstraction of `get_block_from_i` but restricted to the actual chunk it represents, and with components.
+    /// 
+    /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time.
+    #[inline(always)]
+    pub fn get_block_from_chunk_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
+        // println!("xyz: {} {} {}", x, y, z);
+        return self.get_block_from_i(((x+1) + (y+1) * PADDED_CHUNK_SIZE + (z+1) * PADDED_CHUNK_SIZE_SQR) as usize);
+    }
+
     /// Abstraction of `get_block_from_i` but with components.
     /// 
     /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time.
     #[inline(always)]
     pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
+        // println!("xyz: {} {} {}", x, y, z);
         return self.get_block_from_i((x + y * PADDED_CHUNK_SIZE + z * PADDED_CHUNK_SIZE_SQR) as usize);
     }
     

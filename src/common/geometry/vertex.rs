@@ -11,23 +11,26 @@ pub struct Vertex {
     position: [f32; 3],
     color: [f32; 3],
     uv: u32,
+    ao: i32,
     // tex_coords: [f32; 2],
 }
 
 impl Vertex {
-    pub fn new(x: f32, y: f32, z: f32, uv: u32) -> Vertex {
+    pub fn new(x: f32, y: f32, z: f32, uv: u32, ao: i32) -> Vertex {
         return Vertex {
             position: [x, y, z],
             color: BASE_VERTEX_COLOR,
-            uv: uv
+            uv: uv,
+            ao: ao,
         }
     }
 
-    pub fn new_with_rgb(x: f32, y: f32, z: f32, r: f32, g: f32, b: f32, uv: u32) -> Vertex {
+    pub fn new_with_rgb(x: f32, y: f32, z: f32, r: f32, g: f32, b: f32, uv: u32, ao: i32) -> Vertex {
         return Vertex {
             position: [x, y, z],
             color: [r, g, b],
-            uv: uv
+            uv: uv,
+            ao: ao
         }
     }
 
@@ -47,6 +50,11 @@ impl Vertex {
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x3,
                 },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 3]>() as wgpu::BufferAddress * 2,
+                    shader_location: 2,
+                    format: wgpu::VertexFormat::Sint32,
+                }
             ],
         }
     }

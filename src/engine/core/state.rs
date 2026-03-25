@@ -204,7 +204,13 @@ impl State {
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth24PlusStencil8,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less, // pixels plus proches gagnent
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,
@@ -247,7 +253,13 @@ impl State {
                 // Requires Features::CONSERVATIVE_RASTERIZATION
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth24PlusStencil8,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less, // pixels plus proches gagnent
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,
@@ -291,7 +303,13 @@ impl State {
                     // Requires Features::CONSERVATIVE_RASTERIZATION
                     conservative: false,
                 },
-                depth_stencil: None,
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: wgpu::TextureFormat::Depth24PlusStencil8,
+                    depth_write_enabled: true,
+                    depth_compare: wgpu::CompareFunction::Less, // pixels plus proches gagnent
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default(),
+                }),
                 multisample: wgpu::MultisampleState {
                     count: 1,
                     mask: !0,
@@ -302,12 +320,12 @@ impl State {
             });
             
         let gizmo = [
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
-            Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0),
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0),
-            Vertex::new_with_rgb(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0),
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0),
-            Vertex::new_with_rgb(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0, 0),
+            Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0, 0),
+            Vertex::new_with_rgb(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0, 0),
         ];
 
         let gizmo_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -338,6 +356,27 @@ impl State {
 
         game_frame_data.camera = camera_uniform;
 
+        let depth_size = wgpu::Extent3d {
+            width: size.width,
+            height: size.height,
+            depth_or_array_layers: 1,
+        };
+
+        let depth_texture_desc = wgpu::TextureDescriptor {
+            label: Some("Depth Texture"),
+            size: depth_size,
+            view_formats: &[wgpu::TextureFormat::Depth24PlusStencil8],
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth24PlusStencil8, // ou Depth32Float
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        };
+
+        let depth_texture = device.create_texture(&depth_texture_desc);
+
+        let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
         let gpu_context = GpuContext {
             surface,
             device,
@@ -346,6 +385,7 @@ impl State {
         };
 
         let render_manager = RenderManager::new();
+      
 
         let renderer = Renderer::new(
             false,
@@ -364,7 +404,10 @@ impl State {
             (size.width, size.height),
 
             gpu_context,
-            render_manager
+            render_manager,
+
+            depth_texture,
+            depth_view
         );
 
         let text_renderer = TextRenderer::new(
@@ -393,6 +436,20 @@ impl State {
             self.renderer.gpu_context.surface.configure(&self.renderer.gpu_context.device, &self.renderer.gpu_context.config);
             self.renderer.is_surface_configured = true;
             self.text_renderer.resize(width, height);
+            self.renderer.depth_texture = self.renderer.gpu_context.device.create_texture(&wgpu::TextureDescriptor {
+                size: wgpu::Extent3d { width: width, height: height, depth_or_array_layers: 1 },
+                ..wgpu::TextureDescriptor {
+                    label: Some("Depth Texture"),
+                    view_formats: &[wgpu::TextureFormat::Depth24PlusStencil8],
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: wgpu::TextureFormat::Depth24PlusStencil8, // ou Depth32Float
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                    size: Default::default()
+                }
+            });
+            self.renderer.depth_view = self.renderer.depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
         }
     }
 

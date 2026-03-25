@@ -1,10 +1,12 @@
 use crate::game::world::block::BlockInstance;
 
 pub const CHUNK_SIZE: i32 = 32;
+pub const CHUNK_USIZE: usize = CHUNK_SIZE as usize;
 pub const CHUNK_SIZE_F: f32 = CHUNK_SIZE as f32;
 pub const CHUNK_SIZE_SQR: i32 = CHUNK_SIZE * CHUNK_SIZE;
 pub const CHUNK_BLOCK_NUMBER: usize = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) as usize;
 pub const LAST_CHUNK_AXIS_INDEX: i32 = CHUNK_SIZE - 1;
+pub const LAST_CHUNK_AXIS_INDEX_USIZE: usize = LAST_CHUNK_AXIS_INDEX as usize;
 
 pub struct Chunk {
     blocks: [BlockInstance; CHUNK_BLOCK_NUMBER],
@@ -24,7 +26,7 @@ impl Chunk {
         for x in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 // Todo: génération aléatoire
-                let y = 0;
+                let y = (x + z).clamp(0, CHUNK_SIZE-1);
                 chunk.set_block_from_xyz(x, y, z, block.clone());
             }
         }
