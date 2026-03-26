@@ -61,7 +61,12 @@ impl PaddedChunk {
     /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time.
     #[inline(always)]
     pub fn get_block_from_chunk_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
-        // println!("xyz: {} {} {}", x, y, z);
+        println!("xyz: {} {} {}", (x+1), (y+1), (z+1));
+        assert!(
+            x >= -1 && x <= CHUNK_SIZE &&
+            y >= -1 && y <= CHUNK_SIZE &&
+            z >= -1 && z <= CHUNK_SIZE,
+        );
         return self.get_block_from_i(((x+1) + (y+1) * PADDED_CHUNK_SIZE + (z+1) * PADDED_CHUNK_SIZE_SQR) as usize);
     }
 
@@ -70,7 +75,7 @@ impl PaddedChunk {
     /// Prefer using `get_block_from_i` whenever possible, as it saves computing power and time.
     #[inline(always)]
     pub fn get_block_from_xyz(&self, x: i32, y: i32, z: i32) -> BlockInstance {
-        // println!("xyz: {} {} {}", x, y, z);
+        // println!("xyz: {} {} {} {} {} {} {}", x, y, z, x, y * PADDED_CHUNK_SIZE, z * PADDED_CHUNK_SIZE_SQR, x + y * PADDED_CHUNK_SIZE + z * PADDED_CHUNK_SIZE_SQR);
         return self.get_block_from_i((x + y * PADDED_CHUNK_SIZE + z * PADDED_CHUNK_SIZE_SQR) as usize);
     }
     

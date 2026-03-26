@@ -20,7 +20,7 @@ impl WorldMesh {
         let shared_rm = Arc::new(Mutex::new(renderer));
         self.meshes = world
             .get_player_rendered_chunks(player)
-            .into_par_iter()
+            .into_iter()
             .map(|chunk| {
                 let key = (chunk.x, chunk.y, chunk.z);
 

@@ -82,6 +82,10 @@ impl ChunkMesh {
         u: i32,
         v: i32,
     ) -> [i32; 3] {
+        println!(
+            "base: {} {} {} e_d: {} {} {} e_u: {} {} {} e_v: {} {} {} d: {} u: {} v: {}",
+            base[0], base[1], base[2], e_d[0], e_d[1], e_d[2], e_u[0], e_u[1], e_u[2], e_v[0], e_v[1], e_v[2], d, u, v
+        );
         [
             base[0] + d * e_d[0] + u * e_u[0] + v * e_v[0],
             base[1] + d * e_d[1] + u * e_u[1] + v * e_v[1],
@@ -104,6 +108,11 @@ impl ChunkMesh {
         dir1: [i32; 3],
         dir2: [i32; 3],
     ) -> u8 {
+
+        println!("pos: {} {} {}", pos[0], pos[1], pos[2]);
+        println!("s1: {} {} {}", dir1[0], dir1[1], dir1[2]);
+        println!("s2: {} {} {}", dir2[0], dir2[1], dir2[2]);
+
         let s1 = chunk.get_block_from_chunk_xyz(
             pos[0] + dir1[0],
             pos[1] + dir1[1],
@@ -151,13 +160,17 @@ impl ChunkMesh {
         let mut mask: [[FaceMask; CHUNK_SIZE as usize]; CHUNK_SIZE as usize] =
             [[FaceMask::empty(); CHUNK_SIZE as usize]; CHUNK_SIZE as usize];
 
-        for d in 0..=LAST_PADDED_CHUNK_AXIS_INDEX {
+        for d in 0..LAST_PADDED_CHUNK_AXIS_INDEX {
             // === MASK BUILD ===
             for u in 0..=LAST_CHUNK_AXIS_INDEX {
                 for v in 0..=LAST_CHUNK_AXIS_INDEX {
+                    println!("--- POS {} {} {}", d, u, v);
                     let pos = ChunkMesh::build_pos([0, 0, 0], e_d, e_u, e_v, d, u, v);
                     let pos_next = ChunkMesh::build_pos([0, 0, 0], e_d, e_u, e_v, d + 1, u, v);
 
+                    // println!("pos {} {} {}", pos[0], pos[1], pos[2]);
+                    // println!("pos next {} {} {}", pos_next[0], pos_next[1], pos_next[2]);
+                    
                     let previous = padded_chunk.get_block_from_chunk_xyz(pos[0], pos[1], pos[2]);
                     let current = padded_chunk.get_block_from_chunk_xyz(pos_next[0], pos_next[1], pos_next[2]);
 
@@ -174,10 +187,12 @@ impl ChunkMesh {
                     }
                 }
             }
-
+            if d == 0 || d >= LAST_PADDED_CHUNK_AXIS_INDEX - 1 {
+                continue;
+            } 
             // === GREEDY ===
-            for u in 1..=LAST_CHUNK_AXIS_INDEX_USIZE {
-                let mut v = 1;
+            for u in 0..=LAST_CHUNK_AXIS_INDEX_USIZE {
+                let mut v = 0;
 
                 while v <= LAST_CHUNK_AXIS_INDEX_USIZE {
                     let face = mask[u][v];
@@ -221,20 +236,24 @@ impl ChunkMesh {
                     let w_i32 = width as i32;
                     let h_i32 = height as i32;
 
+                    println!("d: {} u: {} v: {} w: {} h: {}", d, u_i32, v_i32, w_i32, h_i32);
+
+                    println!("--- Ps");
                     // === POSITIONS ===
-                    let p0 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32, v_i32);
-                    let p1 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32 + w_i32, v_i32);
-                    let p2 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32 + w_i32, v_i32 + h_i32);
-                    let p3 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32, v_i32 + h_i32);
+                    let p0 = ChunkMesh::build_pos([0, 0, 0], e_d, e_u, e_v, d, u_i32, v_i32);
+                    let p1 = ChunkMesh::build_pos([0, 0, 0], e_d, e_u, e_v, d, u_i32 + w_i32, v_i32);
+                    let p2 = ChunkMesh::build_pos([0, 0, 0], e_d, e_u, e_v, d, u_i32 + w_i32, v_i32 + h_i32);
+                    let p3 = ChunkMesh::build_pos([0, 0, 0], e_d, e_u, e_v, d, u_i32, v_i32 + h_i32);
 
                     // === AO directions ===
                     let du = e_u;
                     let dv = e_v;
 
-                    let ao0 = ChunkMesh::get_vertex_ao_generic(padded_chunk, p0, ChunkMesh::negate(du), ChunkMesh::negate(dv));
-                    let ao1 = ChunkMesh::get_vertex_ao_generic(padded_chunk, p1, du, ChunkMesh::negate(dv));
-                    let ao2 = ChunkMesh::get_vertex_ao_generic(padded_chunk, p2, du, dv);
-                    let ao3 = ChunkMesh::get_vertex_ao_generic(padded_chunk, p3, ChunkMesh::negate(du), dv);
+                    println!("AOs");
+                    let ao0 = ChunkMesh::get_vertex_ao_generic(padded_chunk, [d, u_i32, v_i32], ChunkMesh::negate(du), ChunkMesh::negate(dv));
+                    let ao1 = ChunkMesh::get_vertex_ao_generic(padded_chunk, [d, u_i32, v_i32], du, ChunkMesh::negate(dv));
+                    let ao2 = ChunkMesh::get_vertex_ao_generic(padded_chunk, [d, u_i32, v_i32], du, dv);
+                    let ao3 = ChunkMesh::get_vertex_ao_generic(padded_chunk, [d, u_i32, v_i32], ChunkMesh::negate(du), dv);
 
                     let v1 = Vertex::new(p0[0] as f32, p0[1] as f32, p0[2] as f32, 0, ao0 as i32);
                     let v2 = Vertex::new(p2[0] as f32, p2[1] as f32, p2[2] as f32, 0, ao2 as i32);
