@@ -222,38 +222,38 @@ impl ChunkMesh {
                     // Bottom left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, 0, -1],
                         // Side 1
-                        [0, 0, 0],
+                        [0, 0, -1],
                         // Side 2
-                        [0, 0, 0]
+                        [-1, 0, 0]
                     ],
                     // Bottom right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, 0, -1],
                         // Side 1
-                        [0, 0, 0],
+                        [1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, 0, -1]
                     ],
                     // Top left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, 0, 1],
                         // Side 1
-                        [0, 0, 0],
+                        [-1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, 0, 1]
                     ],
                     // Top right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, 0, 1],
                         // Side 1
-                        [0, 0, 0],
+                        [0, 0, 1],
                         // Side 2
-                        [0, 0, 0]
+                        [1, 0, 0]
                     ],
                 ],
                 // -
@@ -261,38 +261,38 @@ impl ChunkMesh {
                     // Bottom left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, 0, -1],
                         // Side 1
-                        [0, 0, 0],
+                        [0, 0, -1],
                         // Side 2
-                        [0, 0, 0]
+                        [1, 0, 0]
                     ],
                     // Bottom right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, 0, -1],
                         // Side 1
-                        [0, 0, 0],
+                        [-1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, 0, -1]
                     ],
                     // Top left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, 0, 1],
                         // Side 1
-                        [0, 0, 0],
+                        [1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, 0, 1]
                     ],
                     // Top right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, 0, 1],
                         // Side 1
-                        [0, 0, 0],
+                        [0, 0, 1],
                         // Side 2
-                        [0, 0, 0]
+                        [-1, 0, 0]
                     ],
                 ]
             ],
@@ -303,38 +303,38 @@ impl ChunkMesh {
                     // Bottom left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, -1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [0, -1, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [-1, 0, 0]
                     ],
                     // Bottom right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, -1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, -1, 0]
                     ],
                     // Top left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, 1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [-1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, 1, 0]
                     ],
                     // Top right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, 1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [0, 1, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [1, 0, 0]
                     ],
                 ],
                 // -
@@ -342,38 +342,38 @@ impl ChunkMesh {
                     // Bottom left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, -1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [0, -1, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [1, 0, 0]
                     ],
                     // Bottom right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, -1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [-1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, -1, 0]
                     ],
                     // Top left
                     [
                         // Corner
-                        [0, 0, 0],
+                        [1, 1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [1, 0, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [0, 1, 0]
                     ],
                     // Top right
                     [
                         // Corner
-                        [0, 0, 0],
+                        [-1, 1, 0],
                         // Side 1
-                        [0, 0, 0],
+                        [0, 1, 0],
                         // Side 2
-                        [0, 0, 0]
+                        [-1, 0, 0]
                     ],
                 ]
             ],
@@ -492,11 +492,41 @@ impl ChunkMesh {
                     let w_i32 = width as i32;
                     let h_i32 = height as i32;
 
+                    let block_pos = add_i32_vec3(
+                        base,
+                        add_i32_vec3(
+                            add_i32_vec3(
+                                mul_i32_vec3(
+                                    e_v,
+                                    v_i32
+                                ),
+                                mul_i32_vec3(
+                                    e_u,
+                                    u_i32
+                                )
+                            ),
+                            mul_i32_vec3(
+                                e_d,
+                                d
+                            )
+                        )
+                    );
+
                     // === POSITIONS ===
-                    let local_position_v0 = axis_based_face_vertex_positions[face.get_face().is_negative() as usize][0];
-                    let local_position_v1 = add_i32_vec3(axis_based_face_vertex_positions[face.get_face().is_negative() as usize][1], mul_i32_vec3(e_u, w_i32));
-                    let local_position_v2 = add_i32_vec3(axis_based_face_vertex_positions[face.get_face().is_negative() as usize][2], mul_i32_vec3(e_v, h_i32));
-                    let local_position_v3 = add_i32_vec3(axis_based_face_vertex_positions[face.get_face().is_negative() as usize][3], add_i32_vec3(mul_i32_vec3(e_u, w_i32), mul_i32_vec3(e_v, h_i32)));
+                    // let local_position_v0 = add_i32_vec3(block_pos, axis_based_face_vertex_positions[face.get_face().is_negative() as usize][0]);
+                    // let local_position_v1 = add_i32_vec3(block_pos, add_i32_vec3(axis_based_face_vertex_positions[face.get_face().is_negative() as usize][1], mul_i32_vec3(e_u, w_i32)));
+                    // let local_position_v2 = add_i32_vec3(block_pos, add_i32_vec3(axis_based_face_vertex_positions[face.get_face().is_negative() as usize][2], mul_i32_vec3(e_v, h_i32)));
+                    // let local_position_v3 = add_i32_vec3(block_pos, add_i32_vec3(axis_based_face_vertex_positions[face.get_face().is_negative() as usize][3], add_i32_vec3(mul_i32_vec3(e_u, w_i32), mul_i32_vec3(e_v, h_i32))));
+                    let e_u_w = mul_i32_vec3(e_u, w_i32);
+                    let e_v_h = mul_i32_vec3(e_v, h_i32);
+                    let e_uv_wh = add_each_vec3_vec3(e_u_w, e_v_h);
+                    
+                    let local_position_v0 = block_pos;
+                    let local_position_v1 = add_i32_vec3(block_pos, e_u_w);
+                    let local_position_v2 = add_i32_vec3(block_pos, e_v_h);
+                    let local_position_v3 = add_i32_vec3(block_pos, e_uv_wh);
+                    
+                    
                     // let p0 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32, v_i32);
                     // let p1 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32 + w_i32, v_i32);
                     // let p2 = ChunkMesh::build_pos(base, e_d, e_u, e_v, d, u_i32 + w_i32, v_i32 + h_i32);
@@ -512,12 +542,13 @@ impl ChunkMesh {
                     let v3 = Vertex::new(local_position_v2[0] as f32, local_position_v2[1] as f32, local_position_v2[2] as f32, 0, vertex_2_ao as i32);
                     let v4 = Vertex::new(local_position_v3[0] as f32, local_position_v3[1] as f32, local_position_v3[2] as f32, 0, vertex_3_ao as i32);
 
-                    let flip = (vertex_0_ao + vertex_3_ao) > (vertex_1_ao + vertex_2_ao);
+                    // let flip = (vertex_0_ao + vertex_3_ao) > (vertex_1_ao + vertex_2_ao);
+                    let flip = false;
 
                     if !flip {
-                        vertices.extend_from_slice(&[v1, v2, v3, v1, v4, v2]);
+                        vertices.extend_from_slice(&[v1, v2, v3, v3, v2, v4]);
                     } else {
-                        vertices.extend_from_slice(&[v1, v3, v2, v1, v2, v4]);
+                        vertices.extend_from_slice(&[v1, v2, v3, v3, v2, v4]);
                     }
 
                     v += height;
@@ -916,6 +947,14 @@ impl ChunkMesh {
             self.mesh_id = Some(renderer.render_manager.allocate_mesh(&renderer.gpu_context.device, &renderer.gpu_context.queue, MeshData::new(vertices, None)));
         }
     }
+}
+
+fn add_each_vec3_vec3(v: [i32; 3], u: [i32; 3]) -> [i32; 3] {
+    [v[0] + u[0], v[1] + u[1], v[2] + u[2]]
+}
+
+fn mul_each_vec3_vec3(v: [i32; 3], u: [i32; 3]) -> [i32; 3] {
+    [v[0] * u[0], v[1] * u[1], v[2] * u[2]]
 }
 
 fn mul_i32_vec3(v: [i32; 3], scalar: i32) -> [i32; 3] {
