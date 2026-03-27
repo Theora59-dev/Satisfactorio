@@ -165,11 +165,11 @@ pub fn render_world(render_pass: &mut RenderPass, context: &RenderContext) {
     for chunk_mesh in &context.game_state.world_mesh.meshes {
         // Check if the vertex buffer is correctly configured before doing any math.
         let Some(chunk_vertex_buffer) = chunk_mesh.1.buffer.vertex_buffer.as_ref() else {
-            println!("CHUNK RENDERING ERROR: VERTEX BUFFER NOT SET");
+            eprintln!("CHUNK RENDERING ERROR: VERTEX BUFFER NOT SET");
             continue;
         };
         let Some(chunk_vertex_number) = chunk_mesh.1.buffer.vertex_number else {
-            println!("CHUNK RENDERING ERROR: VERTEX NUMBER NOT SET");
+            eprintln!("CHUNK RENDERING ERROR: VERTEX NUMBER NOT SET");
             continue;
         };
 

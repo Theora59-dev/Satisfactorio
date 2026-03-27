@@ -57,14 +57,14 @@ impl World {
 
         let mut chunks_to_rebuild = Vec::new();
 
-        let current_keys:  Vec<_> = self.chunks.keys().cloned().collect();
+        let current_keys: Vec<_> = self.chunks.keys().cloned().collect();
         for key in current_keys {
             if !needed_keys.contains(&key) {
                 self.chunks.remove(&key);
             }
         }
 
-        let missing_keys:  Vec<_> = needed_keys
+        let missing_keys: Vec<_> = needed_keys
             .iter()
             .filter(|k| !self.chunks.contains_key(k))
             .cloned()
@@ -83,15 +83,6 @@ impl World {
             for (key, data) in new_chunks {
                 chunks_to_rebuild.push(key);
                 self.chunks.insert(key, data);
-            }
-        }
-
-        for key in &needed_keys {
-            if let Some(data) = self.chunks.get_mut(key) {
-                if data.state == ChunkState::Ready {
-                    data.set_dirty();
-                    chunks_to_rebuild.push(*key);
-                }
             }
         }
 

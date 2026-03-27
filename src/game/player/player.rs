@@ -82,9 +82,8 @@ impl Player {
 
         camera_controller.update_camera(camera, &self);
         camera_uniform.update_view_proj(&camera);
-
-        println!(
-            "Player: x={}, y={}, z={}, yaw={:.02}",
+        #[cfg(debug_assertions)]
+        println!("Player: self.pos.x = {:.2}, self.pos.y = {:.2}, self.pos.z = {:.2}, self.yaw = {:.2}",
             self.pos.x, self.pos.y, self.pos.z, self.yaw
         );
 
