@@ -14,7 +14,7 @@ pub struct FaceMask {
 
 impl FaceMask {
     #[inline(always)]
-    pub fn empty() -> FaceMask {
+    pub const fn empty() -> FaceMask {
         return FaceMask {
             data: 0x8000_0000_0000_0000u64,
         };

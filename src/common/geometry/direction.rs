@@ -6,13 +6,13 @@ pub enum Direction {
     /// -Y
     Below = 1,
     /// -Z
-    Front = 2,
+    Back  = 2,
     /// +X
     Right = 3,
     /// +Y
     Above = 4,
     /// +Z
-    Back  = 5,
+    Front = 5,
 }
 
 impl Direction {

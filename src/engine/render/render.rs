@@ -547,6 +547,9 @@ impl Renderer {
 
             for mesh in meshes {
                 // println!("RENDERING MESH");
+                if mesh.get_vertex_count() == 0 || mesh.get_vertex_capacity() == 0 {
+                    continue;
+                }
 
                 render_pass.set_vertex_buffer(0, mesh.get_vertex_buffer().slice(..));
 

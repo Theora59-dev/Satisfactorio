@@ -320,12 +320,12 @@ impl State {
             });
             
         let gizmo = [
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0, 0),
-            Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0, 0),
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0, 0),
-            Vertex::new_with_rgb(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0, 0),
-            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0, 0),
-            Vertex::new_with_rgb(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0, 0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0, 3.0),
+            Vertex::new_with_rgb(1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0, 3.0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0, 3.0),
+            Vertex::new_with_rgb(0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0, 3.0),
+            Vertex::new_with_rgb(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0, 3.0),
+            Vertex::new_with_rgb(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0, 3.0),
         ];
 
         let gizmo_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -468,10 +468,10 @@ impl State {
             self.engine_frame_data.frame_count = 0;
             self.engine_frame_data.fps_timer = self.engine_frame_data.fps_timer - 1.0;
 
-            println!(
-                "FPS: {} dt: {}s",
-                self.engine_frame_data.fps, self.engine_frame_data.dt,
-            );
+            // println!(
+            //     "FPS: {} dt: {}s",
+            //     self.engine_frame_data.fps, self.engine_frame_data.dt,
+            // );
         }
     }
 

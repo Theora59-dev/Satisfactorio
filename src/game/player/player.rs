@@ -2,7 +2,7 @@ use crate::{engine::{core::inputs::InputState, render::camera::Camera}, game::{p
 use cgmath::{Point3, num_traits::ToPrimitive};
 
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
-const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 5;
+const DEBUG_HORIZONTAL_RENDER_DISTANCE: u16 = 1;
 /// Must be odd for semantic reasons (otherwise it will render one chunk more than this value)
 const DEBUG_VERTICAL_RENDER_DISTANCE: u16 = 1;
 

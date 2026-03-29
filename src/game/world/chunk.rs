@@ -1,6 +1,6 @@
 use crate::game::world::block::BlockInstance;
 
-pub const CHUNK_SIZE: i32 = 32;
+pub const CHUNK_SIZE: i32 = 8;
 pub const CHUNK_USIZE: usize = CHUNK_SIZE as usize;
 pub const CHUNK_SIZE_F: f32 = CHUNK_SIZE as f32;
 pub const CHUNK_SIZE_SQR: i32 = CHUNK_SIZE * CHUNK_SIZE;
@@ -27,9 +27,15 @@ impl Chunk {
             for z in 0..CHUNK_SIZE {
                 // Todo: génération aléatoire
                 let y = 0;
+                let y = (x + z).clamp(0, LAST_CHUNK_AXIS_INDEX);
                 chunk.set_block_from_xyz(x, y, z, block.clone());
             }
         }
+
+        // chunk.set_block_from_xyz(2, 2, 2, block.clone());
+        // chunk.set_block_from_xyz(1, 3, 2, block.clone());
+        // chunk.set_block_from_xyz(1, 2, 3, block.clone());
+        // chunk.set_block_from_xyz(2, 4, 2, block.clone());
         
         return chunk;
     }
