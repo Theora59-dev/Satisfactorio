@@ -7,7 +7,6 @@ mod tests {
     const BLOCKS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/blocks/");
     const ITEMS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/items/");
 
-
     fn test_state() -> AppState {
         AppState::with_blocks_path(BLOCKS_PATH, ITEMS_PATH)
     }

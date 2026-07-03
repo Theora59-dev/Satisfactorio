@@ -9,7 +9,7 @@ use crate::world::world::World;
 use cgmath::Point3;
 use game::constants::{
     HORIZONTAL_RENDER_DISTANCE, HORIZONTAL_SIMULATION_DISTANCE, RENDER_DISTANCE_CHUNK_COUNT, SPAWN_POSITION_X,
-    SPAWN_POSITION_Y, SPAWN_POSITION_Z, VERTICAL_RENDER_DISTANCE, VERTICAL_SIMULATION_DISTANCE,
+    SPAWN_POSITION_Y, SPAWN_POSITION_Z, SPECTATOR_FLY_SPEED, VERTICAL_RENDER_DISTANCE, VERTICAL_SIMULATION_DISTANCE,
 };
 use game::inventory::{Inventory, ItemData, ItemRules, DEFAULT_INVENTORY_SIZE};
 use game::player::PlayerGameMode;
@@ -170,7 +170,7 @@ impl PlayerState {
                 self.game_mode = PlayerGameMode::Survival;
             }
             PlayerGameMode::Survival => {
-                self.set_player_controller(Box::new(SpectatorPlayerController::new(15.0)));
+                self.set_player_controller(Box::new(SpectatorPlayerController::new(SPECTATOR_FLY_SPEED)));
                 self.game_mode = PlayerGameMode::Spectator;
             }
         }

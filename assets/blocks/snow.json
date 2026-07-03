@@ -1,0 +1,10 @@
+{
+  "id": "snow",
+  "name": "Snow",
+  "solid": true,
+  "hardness": 0.5,
+  "texture": "assets/images/snow.png",
+  "drop": "snow",
+  "has_item": true,
+  "render_mode": "opaque"
+}

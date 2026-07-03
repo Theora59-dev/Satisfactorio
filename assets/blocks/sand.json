@@ -1,0 +1,10 @@
+{
+  "id": "sand",
+  "name": "Sand",
+  "solid": true,
+  "hardness": 0.5,
+  "texture": "assets/images/sand.png",
+  "drop": "sand",
+  "has_item": true,
+  "render_mode": "opaque"
+}

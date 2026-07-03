@@ -1,0 +1,72 @@
+  {
+    "biomes": [
+      {
+        "id": "ocean",
+        "name": "Ocean",
+        "temperature_range": [-0.4, 0.4],
+        "humidity_range": [-1.0, -0.5],
+        "terrain": {
+          "base_height": -8.0,
+          "amplitude": 2.0,
+          "scale": 0.030
+        },
+        "layers": {
+          "surface_block": "sand",
+          "subsurface_block": "sand",
+          "deep_block": "stone",
+          "subsurface_depth": 3
+        }
+      },
+      {
+        "id": "desert",
+        "name": "Desert",
+        "temperature_range": [0.5, 1.0],
+        "humidity_range": [-1.0, -0.3],
+        "terrain": {
+          "base_height": 1.0,
+          "amplitude": 5.0,
+          "scale": 0.015
+        },
+        "layers": {
+          "surface_block": "sand",
+          "subsurface_block": "sand",
+          "deep_block": "stone",
+          "subsurface_depth": 5
+        }
+      },
+      {
+        "id": "snowland",
+        "name": "Snowland",
+        "temperature_range": [-1.0, -0.1],
+        "humidity_range": [-1.0, -0.4],
+        "terrain": {
+          "base_height": 0.0,
+          "amplitude": 10.0,
+          "scale": 0.01
+        },
+        "layers": {
+          "surface_block": "snow",
+          "subsurface_block": "snow",
+          "deep_block": "stone",
+          "subsurface_depth": 2
+        }
+      },
+      {
+        "id": "plains",
+        "name": "Plains",
+        "temperature_range": [-1.0, 1.0],
+        "humidity_range": [-1.0, 1.0],
+        "terrain": {
+          "base_height": 0.0,
+          "amplitude": 7.5,
+          "scale": 0.017
+        },
+        "layers": {
+          "surface_block": "grass",
+          "subsurface_block": "dirt",
+          "deep_block": "stone",
+          "subsurface_depth": 4
+        }
+      }
+    ]
+  }

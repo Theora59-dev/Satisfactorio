@@ -7,16 +7,19 @@ use std::sync::{Arc, RwLock};
 
 use crate::world::data::block::BlockManager;
 use crate::world::data::chunk::{Chunk, ChunkData};
+use crate::world::generation::biome::BiomeRegistry;
 use crate::world::generation::chunk::ChunkWithChecksum;
 use crate::world::generation::ore_gen::{OreGenConfig, OreVeinConfig};
 
 // + caves proches
 // - caves éloignées
-pub const CAVE_SCALE: f64 = 0.0125;
+pub const CAVE_SCALE: f64 = 0.00625;
 // + caves larges
 // - caves étroites
-pub const CAVE_THRESHOLD: f64 = 0.15625;
+pub const CAVE_THRESHOLD: f64 = 0.05125;
 pub const CAVE_MIN_DEPTH: i32 = 0;
+
+pub const BIOME_CLIMATE_SCALE: f64 = 0.0005;
 
 #[derive(Clone)]
 pub struct ChunkGenContext {
@@ -24,6 +27,9 @@ pub struct ChunkGenContext {
     pub surface: Arc<SuperSimplex>,
     pub cave_1: Arc<SuperSimplex>,
     pub cave_2: Arc<SuperSimplex>,
+    pub temperature_noise: Arc<SuperSimplex>,
+    pub humidity_noise: Arc<SuperSimplex>,
+    pub biome_registry: BiomeRegistry,
     pub block_manager: Arc<RwLock<BlockManager>>,
     pub ore_configs: Vec<OreVeinConfig>,
     pub ore_noises: Vec<Arc<SuperSimplex>>,
@@ -38,6 +44,9 @@ impl ChunkGenContext {
             surface: Arc::new(SuperSimplex::default().set_seed(seed)),
             cave_1: Arc::new(SuperSimplex::default().set_seed(seed.wrapping_add(1000))),
             cave_2: Arc::new(SuperSimplex::default().set_seed(seed.wrapping_add(2000))),
+            temperature_noise: Arc::new(SuperSimplex::default().set_seed(seed.wrapping_add(5000))),
+            humidity_noise: Arc::new(SuperSimplex::default().set_seed(seed.wrapping_add(6000))),
+            biome_registry: BiomeRegistry::load("assets/biomes.json"),
             block_manager,
             ore_configs,
             ore_noises,
@@ -78,6 +87,15 @@ impl ChunkGenContext {
         let nz = wz * config.noise_scale;
         let value = noise.get([nx, ny, nz]).abs();
         value > config.threshold
+    }
+
+    #[inline(always)]
+    pub fn get_biome_index(&self, wx: f64, wz: f64) -> usize {
+        let t = self
+            .temperature_noise
+            .get([wx * BIOME_CLIMATE_SCALE, wz * BIOME_CLIMATE_SCALE]);
+        let h = self.humidity_noise.get([wx * BIOME_CLIMATE_SCALE, wz * BIOME_CLIMATE_SCALE]);
+        self.biome_registry.get_biome_index(t, h)
     }
 
     #[inline(always)]

@@ -6,10 +6,6 @@ use crate::world::data::block::{BlockInstance, BlockManager};
 use crate::world::data::chunk::{Chunk, CHUNK_BLOCK_NUMBER, CHUNK_SIZE};
 use crate::world::generation::chunk_generator::ChunkGenContext;
 
-pub const TERRAIN_SCALE: f64 = 0.017;
-pub const TERRAIN_BASE_HEIGHT: f64 = 0.0;
-pub const TERRAIN_AMPLITUDE: f64 = 12.0;
-
 pub struct ChunkWithChecksum {
     pub chunk_data: crate::world::data::chunk::ChunkData,
     pub checksum: [u8; 2],
@@ -42,6 +38,14 @@ impl Chunk {
             .get_block_by_string(String::from("stone"))
             .expect("Did not find block 'stone' in block manager")
             .get_id();
+        let sand_id = blocks
+            .get_block_by_string(String::from("sand"))
+            .expect("Did not find block 'sand' in block manager")
+            .get_id();
+        let snow_id = blocks
+            .get_block_by_string(String::from("snow"))
+            .expect("Did not find block 'snow' in block manager")
+            .get_id();
 
         let mut ore_ids: Vec<Option<u32>> = Vec::with_capacity(ctx.get_ore_count());
         for i in 0..ctx.get_ore_count() {
@@ -65,14 +69,29 @@ impl Chunk {
 
         for x in 0..CHUNK_SIZE {
             let wx = (x + cwx) as f64;
-            let nx = wx * TERRAIN_SCALE;
 
             for z in 0..CHUNK_SIZE {
                 let wz = (z + cwz) as f64;
-                let nz = wz * TERRAIN_SCALE;
 
+                let biome_idx = ctx.get_biome_index(wx, wz);
+                let biome = &ctx.biome_registry.biomes[biome_idx];
+
+                let nx = wx * biome.terrain.scale;
+                let nz = wz * biome.terrain.scale;
                 let valeur = ctx.surface.get([nx, nz]);
-                let terrain_y = valeur.mul_add(TERRAIN_AMPLITUDE, TERRAIN_BASE_HEIGHT) as i32;
+                let terrain_y = valeur.mul_add(biome.terrain.amplitude, biome.terrain.base_height) as i32;
+
+                let surface_id = match biome.layers.surface_block.as_str() {
+                    "sand" => sand_id,
+                    "snow" => snow_id,
+                    _ => grass_id,
+                };
+                let subsurface_id = match biome.layers.subsurface_block.as_str() {
+                    "sand" => sand_id,
+                    "snow" => snow_id,
+                    "dirt" => dirt_id,
+                    _ => dirt_id,
+                };
 
                 for y in 0..CHUNK_SIZE {
                     let wy = y + cwy;
@@ -86,8 +105,8 @@ impl Chunk {
 
                     if !is_cave {
                         let block_id = match wy {
-                            y if y == terrain_y - 1 => grass_id,
-                            y if y >= terrain_y - 4 => dirt_id,
+                            y if y == terrain_y - 1 => surface_id,
+                            y if y >= terrain_y - biome.layers.subsurface_depth => subsurface_id,
                             _ => {
                                 let mut placed_id = stone_id;
                                 for i in 0..ctx.get_ore_count() {

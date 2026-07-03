@@ -2,7 +2,7 @@ use cgmath::Vector3;
 
 use crate::world::data::chunk::CHUNK_SIZE_F;
 
-pub const HORIZONTAL_RENDER_DISTANCE: u16 = 7;
+pub const HORIZONTAL_RENDER_DISTANCE: u16 = 15;
 pub const VERTICAL_RENDER_DISTANCE: u16 = 5;
 pub const RENDER_DISTANCE_CHUNK_COUNT: u16 = HORIZONTAL_RENDER_DISTANCE * VERTICAL_RENDER_DISTANCE;
 pub const HORIZONTAL_SIMULATION_DISTANCE: u16 = HORIZONTAL_RENDER_DISTANCE + 2;
@@ -46,6 +46,8 @@ pub const GRAVITY: f32 = -30.0;
 pub const JUMP_SPEED: f32 = 8.0;
 
 pub const WALK_SPEED: f32 = 6.3;
+
+pub const SPECTATOR_FLY_SPEED: f32 = 30.0;
 
 pub const DECEL_COEF: f32 = 3.693_191_4e-7;
 
