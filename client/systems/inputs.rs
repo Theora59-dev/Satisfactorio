@@ -7,6 +7,7 @@ use winit::keyboard::KeyCode;
 
 pub struct InputState {
     mouse_delta: (f64, f64),
+    mouse_wheel_delta: f32,
     pressed_keys: FxHashMap<KeyCode, bool>,
     pressed_mouse_buttons: FxHashMap<MouseButton, bool>,
 }
@@ -23,6 +24,7 @@ impl InputState {
     pub const fn new() -> Self {
         Self {
             mouse_delta: (0.0, 0.0),
+            mouse_wheel_delta: 0.0,
             pressed_keys: HashMap::with_hasher(FxBuildHasher),
             pressed_mouse_buttons: HashMap::with_hasher(FxBuildHasher),
         }
@@ -62,6 +64,16 @@ impl InputState {
     pub fn set_mouse_delta(&mut self, delta: (f64, f64)) {
         self.mouse_delta.0 += delta.0;
         self.mouse_delta.1 += delta.1;
+    }
+
+    #[inline(always)]
+    pub fn set_mouse_wheel(&mut self, delta: f32) {
+        self.mouse_wheel_delta += delta;
+    }
+
+    #[inline(always)]
+    pub fn take_mouse_wheel_delta(&mut self) -> f32 {
+        replace(&mut self.mouse_wheel_delta, 0.0)
     }
 
     #[inline(always)]

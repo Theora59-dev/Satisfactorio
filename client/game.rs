@@ -340,6 +340,10 @@ impl AppState for GameState {
         self.inputs.set_mouse_button_press(button, is_pressed);
     }
 
+    fn on_mouse_wheel(&mut self, delta: f32) {
+        self.inputs.set_mouse_wheel(delta);
+    }
+
     fn on_key(&mut self, code: KeyCode, is_pressed: bool) {
         self.inputs.set_key_press(code, is_pressed);
     }

@@ -34,6 +34,7 @@ pub trait AppState {
     fn update(&mut self, frame: &EngineFrameData, data: &mut GameFrameData, renderer: &mut Renderer);
     fn on_mouse_move(&mut self, dx: f64, dy: f64);
     fn on_mouse_button(&mut self, button: MouseButton, is_pressed: bool);
+    fn on_mouse_wheel(&mut self, _delta: f32) {}
     fn on_key(&mut self, code: KeyCode, is_pressed: bool);
     fn dispose(&mut self, alloc: &mut Arc<RwLock<GpuAllocator>>);
 }
@@ -124,6 +125,13 @@ impl<S: AppState> ApplicationHandler<AppEvent> for App<S> {
                 ..
             } => {
                 self.app_state.on_mouse_button(button, button_state.is_pressed());
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                let y_delta = match delta {
+                    winit::event::MouseScrollDelta::LineDelta(_, y) => y,
+                    winit::event::MouseScrollDelta::PixelDelta(pos) => pos.y as f32,
+                };
+                self.app_state.on_mouse_wheel(y_delta);
             }
             WindowEvent::Resized(size) => state.resize(size.width, size.height),
             WindowEvent::RedrawRequested => state.render(),

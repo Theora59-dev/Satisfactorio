@@ -77,22 +77,14 @@ impl PlayerState {
 
         let mut commands = Vec::new();
 
-        if inputs.take_key_pressed(KeyCode::F1) {
-            self.selected_slot = 0;
-        } else if inputs.take_key_pressed(KeyCode::F2) {
-            self.selected_slot = 1;
-        } else if inputs.take_key_pressed(KeyCode::F3) {
-            self.selected_slot = 2;
-        } else if inputs.take_key_pressed(KeyCode::F4) {
-            self.selected_slot = 3;
-        } else if inputs.take_key_pressed(KeyCode::F5) {
-            self.selected_slot = 4;
-        } else if inputs.take_key_pressed(KeyCode::F6) {
-            self.selected_slot = 5;
-        } else if inputs.take_key_pressed(KeyCode::F7) {
-            self.selected_slot = 6;
-        } else if inputs.take_key_pressed(KeyCode::F8) {
-            self.selected_slot = 7;
+        let scroll = inputs.take_mouse_wheel_delta();
+        if scroll != 0.0 {
+            const SLOT_COUNT: u32 = 8;
+            if scroll > 0.0 {
+                self.selected_slot = (self.selected_slot + SLOT_COUNT - 1) % SLOT_COUNT;
+            } else {
+                self.selected_slot = (self.selected_slot + 1) % SLOT_COUNT;
+            }
         }
 
         if inputs.take_key_pressed(KeyCode::KeyE) {
