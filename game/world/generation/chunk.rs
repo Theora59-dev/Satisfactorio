@@ -26,26 +26,19 @@ impl Chunk {
 
         let blocks = ctx.block_manager.read().unwrap();
 
-        let grass_id = blocks
-            .get_block_by_string(String::from("grass"))
-            .expect("Did not find block 'grass' in block manager")
-            .get_id();
-        let dirt_id = blocks
-            .get_block_by_string(String::from("dirt"))
-            .expect("Did not find block 'dirt' in block manager")
-            .get_id();
-        let stone_id = blocks
-            .get_block_by_string(String::from("stone"))
-            .expect("Did not find block 'stone' in block manager")
-            .get_id();
-        let sand_id = blocks
-            .get_block_by_string(String::from("sand"))
-            .expect("Did not find block 'sand' in block manager")
-            .get_id();
-        let snow_id = blocks
-            .get_block_by_string(String::from("snow"))
-            .expect("Did not find block 'snow' in block manager")
-            .get_id();
+        let block_id = |name: &str| -> u32 {
+            blocks
+                .get_block_by_string(String::from(name))
+                .unwrap_or_else(|| panic!("Did not find block '{name}' in block manager"))
+                .get_id()
+        };
+
+        let grass_id = block_id("grass");
+        let dirt_id = block_id("dirt");
+        let stone_id = block_id("stone");
+        let sand_id = block_id("sand");
+        let snow_id = block_id("snow");
+        let water_id = block_id("water");
 
         let mut ore_ids: Vec<Option<u32>> = Vec::with_capacity(ctx.get_ore_count());
         for i in 0..ctx.get_ore_count() {
@@ -84,12 +77,14 @@ impl Chunk {
                 let surface_id = match biome.layers.surface_block.as_str() {
                     "sand" => sand_id,
                     "snow" => snow_id,
+                    "water" => water_id,
                     _ => grass_id,
                 };
                 let subsurface_id = match biome.layers.subsurface_block.as_str() {
                     "sand" => sand_id,
                     "snow" => snow_id,
                     "dirt" => dirt_id,
+                    "water" => water_id,
                     _ => dirt_id,
                 };
 

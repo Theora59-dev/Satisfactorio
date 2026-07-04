@@ -11,8 +11,8 @@
           "scale": 0.030
         },
         "layers": {
-          "surface_block": "sand",
-          "subsurface_block": "sand",
+          "surface_block": "water",
+          "subsurface_block": "water",
           "deep_block": "stone",
           "subsurface_depth": 3
         }

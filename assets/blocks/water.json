@@ -1,0 +1,7 @@
+{
+  "id": "water",
+  "name": "Water",
+  "solid": false,
+  "texture": "assets/images/underwater.png",
+  "has_item": false
+}
